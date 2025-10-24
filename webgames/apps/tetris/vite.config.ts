@@ -1,8 +1,19 @@
-import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
+import { webcrypto } from 'node:crypto';
+import { defineConfig } from 'vite';
+
+if (
+  typeof globalThis.crypto === 'undefined' ||
+  typeof globalThis.crypto.getRandomValues !== 'function'
+) {
+  Object.defineProperty(globalThis, 'crypto', {
+    value: webcrypto,
+    configurable: true,
+  });
+}
 
 export default defineConfig({
-  base: '/webgames/',
+  base: '/dev-sandbox/',
   build: {
     outDir: 'dist/tetris',
     emptyOutDir: false,

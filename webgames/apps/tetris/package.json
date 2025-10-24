@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "node --require ../../tools/setup-webcrypto.cjs ../../node_modules/vite/bin/vite.js",
+    "build": "node --require ../../tools/setup-webcrypto.cjs ../../node_modules/vite/bin/vite.js build",
+    "preview": "node --require ../../tools/setup-webcrypto.cjs ../../node_modules/vite/bin/vite.js preview"
   },
   "dependencies": {
     "@webgames/engine": "file:../../packages/engine"
