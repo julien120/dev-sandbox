@@ -1,13 +1,6 @@
-import { webcrypto } from 'node:crypto';
 import { Game, Scene, type SceneContext, type Vector2, vec2 } from '@webgames/engine';
 import './style.css';
-
-if (typeof globalThis.crypto === 'undefined') {
-  Object.defineProperty(globalThis, 'crypto', {
-    value: webcrypto,
-    configurable: true,
-  });
-}
+import { randomInt } from './random';
 
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
@@ -455,7 +448,7 @@ class TetrisScene extends Scene {
   private refillBag(): void {
     this.bag = [...TETROMINOES];
     for (let i = this.bag.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = randomInt(i + 1);
       [this.bag[i], this.bag[j]] = [this.bag[j], this.bag[i]];
     }
   }
