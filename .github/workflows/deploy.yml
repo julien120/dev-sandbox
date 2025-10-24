@@ -36,7 +36,8 @@ jobs:
           if [ -d dist/site ]; then
             cp -r dist/site/* _site/
           else
-            echo "WARN: dist/site is missing (check site build)"
+            echo "ERROR: dist/site is missing (site build failed?)"
+            exit 1
           fi
           for app in fish toilet space tetris; do
             if [ -d "dist/$app" ]; then
@@ -46,6 +47,10 @@ jobs:
               echo "WARN: dist/$app is missing (check $app build)"
             fi
           done
+          if [ ! -f _site/index.html ]; then
+            echo "ERROR: _site/index.html が生成されていません"
+            exit 1
+          fi
       - uses: actions/upload-pages-artifact@v3
         with:
           # uses: ステップには working-directory が効かないためリポジトリ直下で解決する
