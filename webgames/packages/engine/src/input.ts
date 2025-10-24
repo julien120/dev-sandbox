@@ -4,25 +4,55 @@ export class InputManager {
   private readonly pressedKeys = new Set<string>();
   private pointerPosition = { x: 0, y: 0 };
   private listeners: InputCallback[] = [];
+  private readonly keyDownListener = (event: KeyboardEvent) => this.handleKeyDown(event);
+  private readonly keyUpListener = (event: KeyboardEvent) => this.handleKeyUp(event);
+  private readonly pointerListener = (event: PointerEvent) => this.handlePointer(event);
 
   constructor(private readonly target: HTMLElement | Window = window) {}
 
   attach(): void {
-    this.target.addEventListener('keydown', this.handleKeyDown, { passive: true });
-    this.target.addEventListener('keyup', this.handleKeyUp, { passive: true });
-    this.target.addEventListener('pointerdown', this.handlePointer, { passive: true });
-    this.target.addEventListener('pointerup', this.handlePointer, { passive: true });
-    this.target.addEventListener('pointermove', this.handlePointer, { passive: true });
+    this.addTargetListeners(this.target);
   }
 
   detach(): void {
-    this.target.removeEventListener('keydown', this.handleKeyDown);
-    this.target.removeEventListener('keyup', this.handleKeyUp);
-    this.target.removeEventListener('pointerdown', this.handlePointer);
-    this.target.removeEventListener('pointerup', this.handlePointer);
-    this.target.removeEventListener('pointermove', this.handlePointer);
+    this.removeTargetListeners(this.target);
+
     this.pressedKeys.clear();
     this.listeners = [];
+  }
+
+  private addTargetListeners(target: HTMLElement | Window): void {
+    if (target instanceof Window) {
+      target.addEventListener('keydown', this.keyDownListener, { passive: true });
+      target.addEventListener('keyup', this.keyUpListener, { passive: true });
+      target.addEventListener('pointerdown', this.pointerListener, { passive: true });
+      target.addEventListener('pointerup', this.pointerListener, { passive: true });
+      target.addEventListener('pointermove', this.pointerListener, { passive: true });
+      return;
+    }
+
+    target.addEventListener('keydown', this.keyDownListener, { passive: true });
+    target.addEventListener('keyup', this.keyUpListener, { passive: true });
+    target.addEventListener('pointerdown', this.pointerListener, { passive: true });
+    target.addEventListener('pointerup', this.pointerListener, { passive: true });
+    target.addEventListener('pointermove', this.pointerListener, { passive: true });
+  }
+
+  private removeTargetListeners(target: HTMLElement | Window): void {
+    if (target instanceof Window) {
+      target.removeEventListener('keydown', this.keyDownListener);
+      target.removeEventListener('keyup', this.keyUpListener);
+      target.removeEventListener('pointerdown', this.pointerListener);
+      target.removeEventListener('pointerup', this.pointerListener);
+      target.removeEventListener('pointermove', this.pointerListener);
+      return;
+    }
+
+    target.removeEventListener('keydown', this.keyDownListener);
+    target.removeEventListener('keyup', this.keyUpListener);
+    target.removeEventListener('pointerdown', this.pointerListener);
+    target.removeEventListener('pointerup', this.pointerListener);
+    target.removeEventListener('pointermove', this.pointerListener);
   }
 
   isKeyPressed(key: string): boolean {

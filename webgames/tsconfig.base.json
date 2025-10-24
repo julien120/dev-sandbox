@@ -13,7 +13,7 @@
     "resolveJsonModule": true,
     "useDefineForClassFields": true,
     "paths": {
-      "@engine/*": ["packages/engine/src/*"]
+      "@engine/*": ["./packages/engine/src/*"]
     }
   },
   "include": [],
