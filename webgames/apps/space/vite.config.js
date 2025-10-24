@@ -3,7 +3,7 @@ import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
     base: '/dev-sandbox/games/space/',
     build: {
-        outDir: 'dist/space',
+        outDir: '../../dist/space',
         emptyOutDir: false,
     },
     resolve: {

@@ -1,5 +1,9 @@
 # Codex 作業指示（共通・恒常）
 
+## Codex Environment
+
+node: 20
+
 ## 目的
 
 本リポは複数の Web ゲームを GitHub Pages で公開する。あなた(Codex)は実装担当、人間はコードレビューのみを行う。

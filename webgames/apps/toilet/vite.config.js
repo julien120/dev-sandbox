@@ -3,7 +3,7 @@ import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
     base: '/dev-sandbox/games/toilet/',
     build: {
-        outDir: 'dist/toilet',
+        outDir: '../../dist/toilet',
         emptyOutDir: false,
     },
     resolve: {

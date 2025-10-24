@@ -34,7 +34,10 @@ jobs:
           rm -rf _site
           mkdir -p _site _site/games
           if [ -d dist/site ]; then
-            cp -r dist/site/* _site/
+            cp -r dist/site/. _site/
+          elif [ -d site/dist/site ]; then
+            echo "INFO: dist/site が存在しないため site/dist/site を使用します"
+            cp -r site/dist/site/. _site/
           else
             echo "ERROR: dist/site is missing (site build failed?)"
             exit 1
@@ -42,7 +45,7 @@ jobs:
           for app in fish toilet space tetris; do
             if [ -d "dist/$app" ]; then
               mkdir -p "_site/games/$app"
-              cp -r "dist/$app"/* "_site/games/$app"
+              cp -r "dist/$app"/. "_site/games/$app"
             else
               echo "WARN: dist/$app is missing (check $app build)"
             fi
