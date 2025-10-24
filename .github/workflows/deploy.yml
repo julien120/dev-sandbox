@@ -23,17 +23,29 @@ jobs:
           node-version: 20
           cache: 'npm'
       - run: npm ci
-      - run: npm run build
+      - run: |
+          npm --workspace site run build
+          npm --workspace apps/fish run build
+          npm --workspace apps/toilet run build
+          npm --workspace apps/space run build
+          npm --workspace apps/tetris run build || true
       - name: Bundle artifact
         run: |
           rm -rf _site
-          mkdir -p _site
-          cp -r dist/site/* _site/
-          mkdir -p _site/games
-          [ -d dist/fish ] && cp -r dist/fish _site/games/fish
-          [ -d dist/toilet ] && cp -r dist/toilet _site/games/toilet
-          [ -d dist/space ] && cp -r dist/space _site/games/space
-          [ -d dist/tetris ] && cp -r dist/tetris _site/games/tetris
+          mkdir -p _site _site/games
+          if [ -d dist/site ]; then
+            cp -r dist/site/* _site/
+          else
+            echo "WARN: dist/site is missing (check site build)"
+          fi
+          for app in fish toilet space tetris; do
+            if [ -d "dist/$app" ]; then
+              mkdir -p "_site/games/$app"
+              cp -r "dist/$app"/* "_site/games/$app"
+            else
+              echo "WARN: dist/$app is missing (check $app build)"
+            fi
+          done
       - uses: actions/upload-pages-artifact@v3
         with:
           # uses: ステップには working-directory が効かないためリポジトリ直下で解決する
