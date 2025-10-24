@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
-    base: '/webgames/games/fish/',
+    base: '/dev-sandbox/games/fish/',
     build: {
         outDir: 'dist/fish',
         emptyOutDir: false,

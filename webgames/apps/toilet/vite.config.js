@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
-    base: '/webgames/games/toilet/',
+    base: '/dev-sandbox/games/toilet/',
     build: {
         outDir: 'dist/toilet',
         emptyOutDir: false,

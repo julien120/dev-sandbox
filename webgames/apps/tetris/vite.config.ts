@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
-  base: '/webgames/games/tetris/',
+  base: '/dev-sandbox/games/tetris/',
   build: {
     outDir: 'dist/tetris',
     emptyOutDir: false,

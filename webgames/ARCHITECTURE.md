@@ -15,7 +15,7 @@
 - ルートの `package.json` で npm workspaces を定義しています。
 - `npm run dev` で全ワークスペースの開発サーバーを並列起動、`npm run build` で全成果物を生成します。
 - GitHub Pages では `site` のビルド成果物をルート、各ゲームは `/games/<name>/` に配置します。
-- 各 Vite プロジェクトでは `base: '/webgames/'` を指定し、Pages 上で正しいパス解決を行います。
+- 各 Vite プロジェクトでは `base: '/dev-sandbox/'` を指定し、Pages 上で正しいパス解決を行います。
 
 ## Engine Layer
 

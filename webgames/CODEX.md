@@ -44,7 +44,7 @@
 
 - ローカルで `npm ci && npm run dev` で起動し、WASD/矢印で移動、障害物に触れると HP 減少、0 でゲームオーバー。
 - スコア UI 表示。再スタート可。
-- `npm run build` 成功。Pages 配置パス `/webgames/fish/` で動作。
+- `npm run build` 成功。Pages 配置パス `/dev-sandbox/games/fish/` で動作。
 
 ## 言語設定
 

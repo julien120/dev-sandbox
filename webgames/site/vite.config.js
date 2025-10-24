@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 export default defineConfig({
-    base: '/webgames/',
+    base: '/dev-sandbox/',
     build: {
         outDir: 'dist/site',
         emptyOutDir: false,

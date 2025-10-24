@@ -4,28 +4,28 @@ const games = [
         slug: 'fish',
         title: 'スクミー',
         description: '小さな魚を操り、障害物を避けながら海底を冒険するスイムアクション。',
-        thumbnail: '/webgames/assets/fish-placeholder.svg',
+        thumbnail: '/dev-sandbox/assets/fish-placeholder.svg',
         controls: 'WASD / 矢印キーで移動',
     },
     {
         slug: 'toilet',
         title: 'トイレ脱出ゲーム',
         description: '制限時間内に清潔度を高め、神秘の扉を開けるリズムアクション。',
-        thumbnail: '/webgames/assets/toilet-placeholder.svg',
+        thumbnail: '/dev-sandbox/assets/toilet-placeholder.svg',
         controls: 'スペースキー連打',
     },
     {
         slug: 'space',
         title: 'スペースシューター',
         description: '波状攻撃に備え、宇宙を駆けるシューティング。敵を倒してハイスコアを狙おう。',
-        thumbnail: '/webgames/assets/space-placeholder.svg',
+        thumbnail: '/dev-sandbox/assets/space-placeholder.svg',
         controls: 'WASD / 矢印キーで移動、スペースでショット',
     },
     {
         slug: 'tetris',
         title: 'テトリス',
         description: 'テトリミノを積み上げ、ラインを揃えて消していくクラシックパズル。連続ラインで高得点を狙おう。',
-        thumbnail: '/webgames/assets/tetris-placeholder.svg',
+        thumbnail: '/dev-sandbox/assets/tetris-placeholder.svg',
         controls: '← → 移動、↑ / X 右回転、Z 左回転、Space ハードドロップ',
     },
 ];
@@ -59,7 +59,7 @@ games.forEach((game) => {
         <dt>操作方法</dt>
         <dd>${game.controls}</dd>
       </dl>
-      <a class="play-button" href="/webgames/games/${game.slug}/" data-game="${game.slug}">
+      <a class="play-button" href="/dev-sandbox/games/${game.slug}/" data-game="${game.slug}">
         プレイする
       </a>
     </div>
