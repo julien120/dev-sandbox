@@ -30,6 +30,13 @@ const games: GameSummary[] = [
     thumbnail: '/webgames/assets/space-placeholder.svg',
     controls: 'WASD / 矢印キーで移動、スペースでショット',
   },
+  {
+    slug: 'tetris',
+    title: 'テトリス',
+    description: 'テトリミノを積み上げ、ラインを揃えて消していくクラシックパズル。連続ラインで高得点を狙おう。',
+    thumbnail: '/webgames/assets/tetris-placeholder.svg',
+    controls: '← → 移動、↑ / X 右回転、Z 左回転、Space ハードドロップ',
+  },
 ];
 
 const app = document.querySelector<HTMLDivElement>('#app');

@@ -12,6 +12,7 @@
 - 入力はキーボード、タッチ両対応（Tab ナビ/ARIA 考慮）。
 - すべて ESLint/Prettier/TS typecheck を通すこと。
 - 画像/音源は暫定アセットで OK。必ず差し替え前提の抽象化を行う（`assets/`参照）。
+- 新しいゲームを追加するときは、このドキュメントの該当セクションのみを更新し、ほかのゲームの記述を崩さないこと。
 
 ## 出力物（PR に必須）
 
@@ -42,3 +43,16 @@
 - ローカルで `npm ci && npm run dev` で起動し、WASD/矢印で移動、障害物に触れると HP 減少、0 でゲームオーバー。
 - スコア UI 表示。再スタート可。
 - `npm run build` 成功。Pages 配置パス `/webgames/fish/` で動作。
+
+## 言語設定
+
+Codex はすべての出力・要約・コメント・思考メモを日本語で行うこと。
+英語のラベル（例: Explored, Planned, Next Steps）は以下のように日本語で表記する：
+
+- Explored → 調査中
+- Planning → 計画中
+- Next Steps → 次に行うこと
+- Reviewing → レビュー中
+- Summary → まとめ
+
+技術用語は必要に応じて英語のまま残してよい。
