@@ -1,0 +1,27 @@
+{
+  "name": "webgames",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "site"
+  ],
+  "scripts": {
+    "dev": "npm --workspaces run dev",
+    "build": "npm --workspaces run build",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier -w .",
+    "typecheck": "tsc -b",
+    "preview": "npm --workspace site run preview"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.38.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.46.2"
+  },
+  "type": "module"
+}
