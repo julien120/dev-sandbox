@@ -1,0 +1,50 @@
+name: Deploy Pages
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webgames
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+      - name: Bundle artifact
+        run: |
+          rm -rf _site
+          mkdir -p _site
+          cp -r dist/site/* _site/
+          mkdir -p _site/games
+          [ -d dist/fish ] && cp -r dist/fish _site/games/fish
+          [ -d dist/toilet ] && cp -r dist/toilet _site/games/toilet
+          [ -d dist/space ] && cp -r dist/space _site/games/space
+          [ -d dist/tetris ] && cp -r dist/tetris _site/games/tetris
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          # uses: ステップには working-directory が効かないためリポジトリ直下で解決する
+          path: webgames/_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
   base: '/dev-sandbox/games/tetris/',
   build: {
-    outDir: 'dist/tetris',
+    outDir: '../../dist/tetris',
     emptyOutDir: false,
   },
   resolve: {
