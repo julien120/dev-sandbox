@@ -2,11 +2,10 @@
   "files": [],
   "references": [
     { "path": "./packages/engine" },
-    { "path": "./apps/fish" },
-    { "path": "./apps/toilet" },
     { "path": "./apps/space" },
     { "path": "./apps/suika" },
     { "path": "./apps/flappy" },
+    { "path": "./apps/tetris" },
     { "path": "./site" }
   ]
 }

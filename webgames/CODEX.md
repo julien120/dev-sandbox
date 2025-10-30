@@ -43,7 +43,7 @@ node: 20
 
 ## 着手テンプレ（例）
 
-- `apps/fish/src/main.ts` を作成。エンジンから `Game`, `Scene`, `Input`, `Sprite` を使用して最小ステージを描画する。
+- `apps/suika/src/main.ts` を作成。エンジンから `Game`, `Scene`, `Input`, `Sprite` を使用して最小ステージを描画する。
 - `packages/engine` に `SceneManager`, `Ticker`, `RectCollider`, `CircleCollider`, `AssetLoader` を実装して再利用可能にする。
 - fps60 前提、タイムステップ固定（可変補間あり）。
 
@@ -51,7 +51,7 @@ node: 20
 
 - ローカルで `npm ci && npm run dev` で起動し、WASD/矢印で移動、障害物に触れると HP 減少、0 でゲームオーバー。
 - スコア UI 表示。再スタート可。
-- `npm run build` 成功。Pages 配置パス `/dev-sandbox/games/fish/` で動作。
+- `npm run build` 成功。Pages 配置パス `/dev-sandbox/games/suika/` で動作。
 
 ## 言語設定
 
