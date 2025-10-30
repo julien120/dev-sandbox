@@ -8,6 +8,13 @@ const games = [
         controls: 'WASD / 矢印キーで移動',
     },
     {
+        slug: 'flappy',
+        title: 'フラッピー・フライト',
+        description: '障害物をすり抜けながらリズムよく飛行するフラッピーバードライクなアクション。',
+        thumbnail: '/dev-sandbox/assets/flappy-placeholder.svg',
+        controls: 'スペース / クリック / タップで羽ばたく',
+    },
+    {
         slug: 'toilet',
         title: 'トイレ脱出ゲーム',
         description: '制限時間内に清潔度を高め、神秘の扉を開けるリズムアクション。',

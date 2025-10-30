@@ -28,6 +28,7 @@ jobs:
           npm --workspace apps/fish run build
           npm --workspace apps/toilet run build
           npm --workspace apps/space run build
+          npm --workspace apps/flappy run build
           npm --workspace apps/tetris run build || true
       - name: Bundle artifact
         run: |
@@ -42,7 +43,7 @@ jobs:
             echo "ERROR: dist/site is missing (site build failed?)"
             exit 1
           fi
-          for app in fish toilet space tetris; do
+          for app in fish toilet space flappy tetris; do
             if [ -d "dist/$app" ]; then
               mkdir -p "_site/games/$app"
               cp -r "dist/$app"/. "_site/games/$app"

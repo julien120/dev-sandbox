@@ -5,6 +5,7 @@
     { "path": "./apps/fish" },
     { "path": "./apps/toilet" },
     { "path": "./apps/space" },
+    { "path": "./apps/flappy" },
     { "path": "./site" }
   ]
 }
