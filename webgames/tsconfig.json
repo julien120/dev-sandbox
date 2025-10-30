@@ -4,6 +4,7 @@
     { "path": "./packages/engine" },
     { "path": "./apps/space" },
     { "path": "./apps/suika" },
+    { "path": "./apps/emotion" },
     { "path": "./apps/flappy" },
     { "path": "./apps/tetris" },
     { "path": "./site" }

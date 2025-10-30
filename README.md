@@ -13,7 +13,7 @@ Unity エンジニアでも取り掛かりやすいように、開発体制・�
 ```text
 dev-sandbox/
 ├─ webgames/                  # 実際のゲーム群とサイトを格納するメインワークスペース
-│  ├─ apps/                   # 各ゲーム（flappy, space, suika, tetris など）の Vite プロジェクト
+│  ├─ apps/                   # 各ゲーム（flappy, space, suika, emotion, tetris など）の Vite プロジェクト
 │  ├─ packages/engine/        # TypeScript 製の共有ゲームエンジン (Game/Scene/Input など)
 │  ├─ site/                   # ポータルサイト (ゲーム一覧 / ルーティングなしの静的ページ)
 │  ├─ assets/                 # 共通の画像・音声など。差し替え前提の仮素材を格納
@@ -71,8 +71,8 @@ dev-sandbox/
    各ワークスペースの `dev` スクリプトが並列実行され、Vite の開発サーバが立ち上がります。
 3. **特定ゲームだけ起動したい場合**
    ```bash
-   npm --workspace apps/suika run dev
-   # 他ゲームも suika を入れ替えるだけ
+   npm --workspace apps/emotion run dev
+   # 他ゲームも emotion を入れ替えるだけ
    ```
 4. **コードスタイル / 型チェック**
    ```bash

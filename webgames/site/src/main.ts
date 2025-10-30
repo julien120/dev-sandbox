@@ -24,6 +24,13 @@ const games: GameSummary[] = [
     controls: 'WASD / 矢印キーで移動、スペースでショット',
   },
   {
+    slug: 'emotion',
+    title: 'えがおジャッジ',
+    description: 'カメラに向かって表情を切り替え、指定された絵文字と同じ感情を素早く表現しよう。',
+    thumbnail: '/dev-sandbox/assets/emotion-placeholder.svg',
+    controls: 'カメラ許可必須・画面の指示に合わせて表情を切り替え',
+  },
+  {
     slug: 'suika',
     title: 'すいかドロップ',
     description: '落としたフルーツ同士を合体させ、大きなスイカを育てるフィジカルパズル。',

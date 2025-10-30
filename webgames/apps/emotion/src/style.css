@@ -1,0 +1,42 @@
+:root {
+  color-scheme: light;
+  font-family: 'Noto Sans JP', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, #dbeafe, #bfdbfe 45%, #1d4ed8);
+  color: #0f172a;
+}
+
+main {
+  position: relative;
+}
+
+canvas {
+  border-radius: 20px;
+  border: 4px solid rgba(15, 23, 42, 0.15);
+  box-shadow: 0 24px 56px rgba(29, 78, 216, 0.3);
+  outline: none;
+  background: #111827;
+}
+
+#camera-stream {
+  display: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
