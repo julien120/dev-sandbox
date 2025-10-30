@@ -2,6 +2,7 @@ import './style.css';
 const games = [
     {
         slug: 'flappy',
+        url: '/dev-sandbox/games/flappy/',
         title: 'フラッピー・フライト',
         description: '障害物をすり抜けながらリズムよく飛行するフラッピーバードライクなアクション。',
         thumbnail: '/dev-sandbox/assets/flappy-placeholder.svg',
@@ -9,6 +10,7 @@ const games = [
     },
     {
         slug: 'space',
+        url: '/dev-sandbox/games/space/',
         title: 'スペースシューター',
         description: '波状攻撃に備え、宇宙を駆けるシューティング。敵を倒してハイスコアを狙おう。',
         thumbnail: '/dev-sandbox/assets/space-placeholder.svg',
@@ -16,6 +18,7 @@ const games = [
     },
     {
         slug: 'emotion',
+        url: '/dev-sandbox/games/emotion/',
         title: 'えがおジャッジ',
         description: 'カメラに向かって表情を切り替え、指定された絵文字と同じ感情を素早く表現しよう。',
         thumbnail: '/dev-sandbox/assets/emotion-placeholder.svg',
@@ -23,6 +26,7 @@ const games = [
     },
     {
         slug: 'suika',
+        url: '/dev-sandbox/games/suika/',
         title: 'すいかドロップ',
         description: '落としたフルーツ同士を合体させ、大きなスイカを育てるフィジカルパズル。',
         thumbnail: '/dev-sandbox/assets/suika-placeholder.svg',
@@ -30,10 +34,19 @@ const games = [
     },
     {
         slug: 'tetris',
+        url: '/dev-sandbox/games/tetris/',
         title: 'テトリス',
         description: 'テトリミノを積み上げ、ラインを揃えて消していくクラシックパズル。連続ラインで高得点を狙おう。',
         thumbnail: '/dev-sandbox/assets/tetris-placeholder.svg',
         controls: '← → 移動、↑ / X 右回転、Z 左回転、Space ハードドロップ',
+    },
+    {
+        slug: 'gifmaker',
+        url: '/dev-sandbox/tools/gifmaker/',
+        title: 'gifメイカー',
+        description: '動画をドラッグ＆ドロップするだけで高画質GIFを手早く作れるブラウザツール。',
+        thumbnail: '/dev-sandbox/assets/gifmaker-placeholder.svg',
+        controls: '動画ファイルをドロップし、設定を調整して GIF を作成',
     },
 ];
 const app = document.querySelector('#app');
@@ -42,10 +55,10 @@ if (!app) {
 }
 app.innerHTML = `
   <header>
-    <h1>Web Games Collection</h1>
-    <p>GitHub Pages で公開中のオリジナルゲームたち。好きなゲームを選んで遊んでみよう！</p>
+    <h1>Web Games & Tools Collection</h1>
+    <p>GitHub Pages で公開中のオリジナルゲームやブラウザツール。気になるコンテンツを選んで体験しよう！</p>
   </header>
-  <section class="grid" aria-label="ゲーム一覧"></section>
+  <section class="grid" aria-label="ゲーム・ツール一覧"></section>
   <footer>
     <p>&copy; ${new Date().getFullYear()} Web Games Team</p>
   </footer>
@@ -66,7 +79,7 @@ games.forEach((game) => {
         <dt>操作方法</dt>
         <dd>${game.controls}</dd>
       </dl>
-      <a class="play-button" href="/dev-sandbox/games/${game.slug}/" data-game="${game.slug}">
+      <a class="play-button" href="${game.url}" data-game="${game.slug}">
         プレイする
       </a>
     </div>

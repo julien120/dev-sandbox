@@ -29,6 +29,7 @@ jobs:
           npm --workspace apps/flappy run build
           npm --workspace apps/suika run build
           npm --workspace apps/emotion run build
+          npm --workspace apps/gifmaker run build
           npm --workspace apps/tetris run build || true
       - name: Bundle artifact
         run: |
@@ -43,10 +44,14 @@ jobs:
             echo "ERROR: dist/site is missing (site build failed?)"
             exit 1
           fi
-          for app in space flappy suika emotion tetris; do
+          for app in space flappy suika emotion gifmaker tetris; do
             if [ -d "dist/$app" ]; then
-              mkdir -p "_site/games/$app"
-              cp -r "dist/$app"/. "_site/games/$app"
+              target_dir="_site/games/$app"
+              if [ "$app" = "gifmaker" ]; then
+                target_dir="_site/tools/$app"
+              fi
+              mkdir -p "$target_dir"
+              cp -r "dist/$app"/. "$target_dir"
             else
               echo "WARN: dist/$app is missing (check $app build)"
             fi

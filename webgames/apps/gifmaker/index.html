@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/dev-sandbox/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>gifメイカー</title>
+  </head>
+  <body>
+    <main>
+      <h1>gifメイカー</h1>
+      <section class="uploader" id="dropzone" aria-label="動画ファイルのアップロード">
+        <p>ここに動画ファイルをドラッグ＆ドロップ（またはクリック）</p>
+        <p class="hint">MP4 / MOV / WebM に対応</p>
+        <input type="file" id="file-input" accept="video/mp4,video/webm,video/quicktime" />
+      </section>
+
+      <section class="controls" aria-label="変換設定">
+        <div class="control">
+          <label>
+            出力幅
+            <input type="range" id="width-range" min="160" max="960" step="20" value="480" />
+            <span id="width-value">480px</span>
+          </label>
+        </div>
+        <div class="control">
+          <label>
+            フレームレート
+            <input type="range" id="fps-range" min="5" max="30" step="1" value="12" />
+            <span id="fps-value">12fps</span>
+          </label>
+        </div>
+        <div class="control">
+          <label>
+            1フレームあたりの品質
+            <input type="range" id="quality-range" min="4" max="8" step="1" value="6" />
+            <span id="quality-value">6/8</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="preview" aria-live="polite">
+        <video id="preview-video" controls playsinline></video>
+        <canvas id="working-canvas" width="480" height="270"></canvas>
+      </section>
+
+      <section class="actions">
+        <button id="convert-button" disabled>GIF を作成</button>
+        <a id="download-link" class="download" download="output.gif">GIF をダウンロード</a>
+      </section>
+
+      <section class="status" id="status" aria-live="polite"></section>
+      <section class="tips">
+        <h2>注意事項</h2>
+        <ul>
+          <li>出力は 10MB 以下になるよう自動的にダウンサンプリングします。</li>
+          <li>高画質を維持するには、短めの動画や適度な解像度を推奨します。</li>
+          <li>処理はブラウザ上で行われ、ファイルはアップロードされません。</li>
+        </ul>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

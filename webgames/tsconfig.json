@@ -5,6 +5,7 @@
     { "path": "./apps/space" },
     { "path": "./apps/suika" },
     { "path": "./apps/emotion" },
+    { "path": "./apps/gifmaker" },
     { "path": "./apps/flappy" },
     { "path": "./apps/tetris" },
     { "path": "./site" }
