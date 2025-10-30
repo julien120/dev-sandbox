@@ -371,13 +371,22 @@ class NeuQuant {
   }
 
   colorMap(): Uint8Array {
+    const sorted = this.network
+      .map((color) => {
+        return [
+          Math.max(0, Math.min(255, Math.round(color[0]))),
+          Math.max(0, Math.min(255, Math.round(color[1]))),
+          Math.max(0, Math.min(255, Math.round(color[2]))),
+        ] as number[];
+      })
+      .sort((a, b) => a[1] - b[1]);
     const map = new Uint8Array(this.netsize * 3);
-    for (let i = 0; i < this.netsize; i += 1) {
-      const j = this.netIndex[i] ?? i;
-      const p = this.network[j] ?? this.network[i] ?? [0, 0, 0];
-      map[i * 3 + 0] = Math.max(0, Math.min(255, Math.round(p[0])));
-      map[i * 3 + 1] = Math.max(0, Math.min(255, Math.round(p[1])));
-      map[i * 3 + 2] = Math.max(0, Math.min(255, Math.round(p[2])));
+    for (let i = 0; i < sorted.length; i += 1) {
+      const p = sorted[i];
+      const offset = i * 3;
+      map[offset] = p[0];
+      map[offset + 1] = p[1];
+      map[offset + 2] = p[2];
     }
     return map;
   }
