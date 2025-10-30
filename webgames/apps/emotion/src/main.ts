@@ -45,6 +45,44 @@ type ExpressionFeatures = {
   eyeOpenness: number;
 };
 
+type ExpressionThresholds = {
+  joy: {
+    minSmile: number;
+    minMouthOpen: number;
+  };
+  anger: {
+    maxEyeOpen: number;
+    maxMouthOpen: number;
+  };
+  sad: {
+    minFrown: number;
+    maxMouthOpen: number;
+  };
+  surprise: {
+    minMouthOpen: number;
+    minEyeOpen: number;
+  };
+};
+
+const DEFAULT_THRESHOLDS: ExpressionThresholds = {
+  joy: {
+    minSmile: 0.02,
+    minMouthOpen: 0.1,
+  },
+  anger: {
+    maxEyeOpen: 0.16,
+    maxMouthOpen: 0.12,
+  },
+  sad: {
+    minFrown: 0.02,
+    maxMouthOpen: 0.14,
+  },
+  surprise: {
+    minMouthOpen: 0.22,
+    minEyeOpen: 0.27,
+  },
+};
+
 const EXPRESSIONS: ExpressionDefinition[] = [
   { id: 'joy', emoji: '😀', label: 'よろこび', description: '口角を上げてにっこり' },
   { id: 'anger', emoji: '😡', label: 'いかり', description: '目を細めてキッと' },
@@ -61,6 +99,7 @@ const BONUS_TIME = 8;
 const classifyExpression = (
   face: DetectedFace,
   frameSize: Vector2,
+  thresholds: ExpressionThresholds,
 ): { id: ExpressionId | 'unknown'; features: ExpressionFeatures | null } => {
   if (!face.landmarks?.length) {
     return { id: 'unknown', features: null };
@@ -143,16 +182,16 @@ const classifyExpression = (
   const mouthOpen = features.mouthOpen;
   const eyeOpen = features.eyeOpenness;
 
-  if (mouthOpen > 0.22 && eyeOpen > 0.27) {
+  if (mouthOpen >= thresholds.surprise.minMouthOpen && eyeOpen >= thresholds.surprise.minEyeOpen) {
     return { id: 'surprise', features };
   }
-  if (smileScore > 0.02 && mouthOpen > 0.1) {
+  if (smileScore >= thresholds.joy.minSmile && mouthOpen >= thresholds.joy.minMouthOpen) {
     return { id: 'joy', features };
   }
-  if (eyeOpen < 0.16 && mouthOpen < 0.12) {
+  if (eyeOpen <= thresholds.anger.maxEyeOpen && mouthOpen <= thresholds.anger.maxMouthOpen) {
     return { id: 'anger', features };
   }
-  if (frownScore > 0.02 && mouthOpen < 0.14) {
+  if (frownScore >= thresholds.sad.minFrown && mouthOpen <= thresholds.sad.maxMouthOpen) {
     return { id: 'sad', features };
   }
 
@@ -178,6 +217,8 @@ class EmotionScene extends Scene {
   private status: string | null = null;
   private gameOver = false;
   private removeInputListener: (() => void) | null = null;
+  private thresholds: ExpressionThresholds = JSON.parse(JSON.stringify(DEFAULT_THRESHOLDS));
+  private controlsContainer: HTMLDivElement | null = null;
 
   async onEnter(context: SceneContext): Promise<void> {
     this.resetState();
@@ -224,6 +265,7 @@ class EmotionScene extends Scene {
     this.cleanupStream();
     this.removeInputListener?.();
     this.removeInputListener = null;
+    this.destroyControls();
   }
 
   update(dt: number): void {
@@ -288,6 +330,9 @@ class EmotionScene extends Scene {
     this.status = null;
     this.gameOver = false;
     this.detectionTimer = 0;
+    if (!this.controlsContainer) {
+      this.initializeControls();
+    }
   }
 
   private handleInput(event: KeyboardEvent | PointerEvent): void {
@@ -330,7 +375,7 @@ class EmotionScene extends Scene {
 
       const face = faces[0];
       const frameSize = vec2(this.video.videoWidth || this.video.width, this.video.videoHeight || this.video.height);
-      const result = classifyExpression(face, frameSize);
+      const result = classifyExpression(face, frameSize, this.thresholds);
       this.lastExpression = result.id;
       this.lastFeatures = result.features;
       this.lastFace = face;
@@ -385,6 +430,8 @@ class EmotionScene extends Scene {
     ctx.lineWidth = 3;
     ctx.strokeRect(x, y, width, height);
     ctx.restore();
+
+    this.drawLandmarks(ctx, canvas, scaleX, scaleY);
   }
 
   private drawHud(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {
@@ -468,6 +515,148 @@ class EmotionScene extends Scene {
       this.video.srcObject = null;
       this.video = null;
     }
+  }
+
+  private drawLandmarks(
+    ctx: CanvasRenderingContext2D,
+    canvas: HTMLCanvasElement,
+    scaleX: number,
+    scaleY: number,
+  ): void {
+    const face = this.lastFace;
+    const video = this.video;
+    if (!face || !video || !face.landmarks) {
+      return;
+    }
+
+    const projectPoint = (point: DOMPointReadOnly): Vector2 => {
+      const mirroredX = canvas.width - point.x * scaleX;
+      const y = point.y * scaleY;
+      return vec2(mirroredX, y);
+    };
+
+    const drawPoint = (point: Vector2, color: string): void => {
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.arc(point.x, point.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    face.landmarks.forEach((landmark) => {
+      const locations = landmark.locations ?? [];
+      if (locations.length === 0) {
+        return;
+      }
+
+      const color =
+        landmark.type === 'mouth'
+          ? '#f97316'
+          : landmark.type === 'eye'
+            ? '#38bdf8'
+            : '#facc15';
+
+      const projected = locations.map(projectPoint);
+
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(projected[0].x, projected[0].y);
+      for (let i = 1; i < projected.length; i += 1) {
+        ctx.lineTo(projected[i].x, projected[i].y);
+      }
+      if (landmark.type === 'mouth' || landmark.type === 'eye') {
+        ctx.closePath();
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      projected.forEach((point) => drawPoint(point, color));
+    });
+  }
+
+  private initializeControls(): void {
+    this.destroyControls();
+
+    const container = document.createElement('div');
+    container.className = 'threshold-panel';
+
+    const title = document.createElement('h2');
+    title.textContent = 'Expression Thresholds';
+    container.appendChild(title);
+
+    type Control = {
+      label: string;
+      path: readonly [keyof ExpressionThresholds, string];
+      min: number;
+      max: number;
+      step: number;
+    };
+
+    const controls: Control[] = [
+      { label: 'Joy: Min Smile Curve (%)', path: ['joy', 'minSmile'], min: 0, max: 0.1, step: 0.005 },
+      { label: 'Joy: Min Mouth Open (%)', path: ['joy', 'minMouthOpen'], min: 0, max: 0.3, step: 0.01 },
+      { label: 'Anger: Max Eye Open (%)', path: ['anger', 'maxEyeOpen'], min: 0, max: 0.4, step: 0.01 },
+      { label: 'Anger: Max Mouth Open (%)', path: ['anger', 'maxMouthOpen'], min: 0, max: 0.3, step: 0.01 },
+      { label: 'Sad: Min Frown Curve (%)', path: ['sad', 'minFrown'], min: 0, max: 0.1, step: 0.005 },
+      { label: 'Sad: Max Mouth Open (%)', path: ['sad', 'maxMouthOpen'], min: 0, max: 0.3, step: 0.01 },
+      { label: 'Surprise: Min Mouth Open (%)', path: ['surprise', 'minMouthOpen'], min: 0, max: 0.5, step: 0.01 },
+      { label: 'Surprise: Min Eye Open (%)', path: ['surprise', 'minEyeOpen'], min: 0, max: 0.5, step: 0.01 },
+    ];
+
+    controls.forEach(({ label, path, min, max, step }) => {
+      const wrapper = document.createElement('label');
+      wrapper.className = 'threshold-item';
+
+      const text = document.createElement('span');
+      text.textContent = label;
+
+      const valueSpan = document.createElement('code');
+      valueSpan.className = 'threshold-value';
+
+      const input = document.createElement('input');
+      input.type = 'range';
+      input.min = String(min);
+      input.max = String(max);
+      input.step = String(step);
+      input.value = String(this.getThresholdValue(path));
+
+      const updateValue = (value: number) => {
+        this.setThresholdValue(path, value);
+        valueSpan.textContent = `${(value * 100).toFixed(1)}%`;
+      };
+
+      input.addEventListener('input', () => {
+        updateValue(Number.parseFloat(input.value));
+      });
+
+      updateValue(Number.parseFloat(input.value));
+
+      wrapper.appendChild(text);
+      wrapper.appendChild(input);
+      wrapper.appendChild(valueSpan);
+      container.appendChild(wrapper);
+    });
+
+    document.body.appendChild(container);
+    this.controlsContainer = container;
+  }
+
+  private destroyControls(): void {
+    if (this.controlsContainer?.parentNode) {
+      this.controlsContainer.parentNode.removeChild(this.controlsContainer);
+    }
+    this.controlsContainer = null;
+  }
+
+  private getThresholdValue(path: readonly [keyof ExpressionThresholds, string]): number {
+    const [group, key] = path;
+    return (this.thresholds[group] as Record<string, number>)[key];
+  }
+
+  private setThresholdValue(path: readonly [keyof ExpressionThresholds, string], value: number): void {
+    const [group, key] = path;
+    (this.thresholds[group] as Record<string, number>)[key] = value;
   }
 }
 
