@@ -38,6 +38,13 @@ const games: GameSummary[] = [
     controls: 'WASD / 矢印キーで移動、スペースでショット',
   },
   {
+    slug: 'suika',
+    title: 'すいかドロップ',
+    description: '落としたフルーツ同士を合体させ、大きなスイカを育てるフィジカルパズル。',
+    thumbnail: '/dev-sandbox/assets/suika-placeholder.svg',
+    controls: '← → / A D 移動、Space / Enter / タップでドロップ',
+  },
+  {
     slug: 'tetris',
     title: 'テトリス',
     description: 'テトリミノを積み上げ、ラインを揃えて消していくクラシックパズル。連続ラインで高得点を狙おう。',
