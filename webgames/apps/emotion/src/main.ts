@@ -1,36 +1,9 @@
-import { Game, Scene, type SceneContext, clamp, vec2, type Vector2 } from '@webgames/engine';
+import { Game, Scene, type SceneContext, clamp, vec2 } from '@webgames/engine';
+import { FaceLandmarker, FilesetResolver, type FaceLandmarkerResult } from '@mediapipe/tasks-vision';
+import * as ort from 'onnxruntime-web';
 import './style.css';
 
-type FaceDetectorOptions = {
-  maxDetectedFaces?: number;
-  fastMode?: boolean;
-  scoreThreshold?: number;
-};
-
-type LandmarkPoints = ReadonlyArray<DOMPointReadOnly>;
-
-type DetectedFaceLandmark = {
-  type: string;
-  locations: LandmarkPoints;
-};
-
-type DetectedFace = {
-  boundingBox: DOMRectReadOnly;
-  landmarks?: ReadonlyArray<DetectedFaceLandmark>;
-};
-
-type FaceDetectorHandle = {
-  detect(source: CanvasImageSource): Promise<DetectedFace[]>;
-};
-
-type FaceDetectorConstructor = new (options?: FaceDetectorOptions) => FaceDetectorHandle;
-
-const getFaceDetectorConstructor = (): FaceDetectorConstructor | null => {
-  const ctor = (globalThis as typeof globalThis & { FaceDetector?: FaceDetectorConstructor }).FaceDetector;
-  return ctor ?? null;
-};
-
-type ExpressionId = 'joy' | 'sad' | 'anger' | 'surprise';
+type ExpressionId = 'neutral' | 'joy' | 'surprise' | 'sad' | 'anger';
 
 type ExpressionDefinition = {
   id: ExpressionId;
@@ -39,233 +12,158 @@ type ExpressionDefinition = {
   description: string;
 };
 
-type ExpressionFeatures = {
-  mouthOpen: number;
-  mouthCurve: number;
-  eyeOpenness: number;
-};
+type ExpressionProbabilities = Record<ExpressionId, number>;
 
-type ExpressionThresholds = {
-  joy: {
-    minSmile: number;
-    minMouthOpen: number;
-  };
-  anger: {
-    maxEyeOpen: number;
-    maxMouthOpen: number;
-  };
-  sad: {
-    minFrown: number;
-    maxMouthOpen: number;
-  };
-  surprise: {
-    minMouthOpen: number;
-    minEyeOpen: number;
-  };
-};
-
-const DEFAULT_THRESHOLDS: ExpressionThresholds = {
-  joy: {
-    minSmile: 0.02,
-    minMouthOpen: 0.1,
-  },
-  anger: {
-    maxEyeOpen: 0.16,
-    maxMouthOpen: 0.12,
-  },
-  sad: {
-    minFrown: 0.02,
-    maxMouthOpen: 0.14,
-  },
-  surprise: {
-    minMouthOpen: 0.22,
-    minEyeOpen: 0.27,
-  },
+type EmotionPrediction = {
+  id: ExpressionId | 'unknown';
+  confidence: number;
+  competitor: number;
+  probabilities: ExpressionProbabilities;
 };
 
 const EXPRESSIONS: ExpressionDefinition[] = [
+  { id: 'neutral', emoji: '😐', label: 'ニュートラル', description: '自然体でリラックス' },
   { id: 'joy', emoji: '😀', label: 'よろこび', description: '口角を上げてにっこり' },
-  { id: 'anger', emoji: '😡', label: 'いかり', description: '目を細めてキッと' },
-  { id: 'sad', emoji: '😢', label: 'かなしい', description: '口角を下げてしょんぼり' },
   { id: 'surprise', emoji: '😲', label: 'おどろき', description: '目と口を大きく開く' },
+  { id: 'sad', emoji: '😢', label: 'かなしい', description: '口角を下げてしょんぼり' },
+  { id: 'anger', emoji: '😡', label: 'いかり', description: '眉を寄せてキリッと' },
 ];
 
+const TARGET_EXPRESSIONS = EXPRESSIONS.filter((expression) => expression.id !== 'neutral');
+
+const FER_LABELS = ['neutral', 'happiness', 'surprise', 'sadness', 'anger'];
+
+const FER_TO_EXPRESSION: Record<ExpressionId, number> = {
+  neutral: FER_LABELS.indexOf('neutral'),
+  joy: FER_LABELS.indexOf('happiness'),
+  surprise: FER_LABELS.indexOf('surprise'),
+  sad: FER_LABELS.indexOf('sadness'),
+  anger: FER_LABELS.indexOf('anger'),
+};
+
 const DETECTION_INTERVAL = 0.2;
-const MATCH_FILL_SPEED = 0.5;
-const MATCH_DECAY_SPEED = 0.35;
+const MATCH_FILL_SPEED = 0.55;
+const MATCH_THRESHOLD = 0.18;
+const MATCH_MARGIN = 0.04;
 const INITIAL_TIME = 45;
 const BONUS_TIME = 8;
+const FACE_PADDING = 0.25;
+const CONFIDENCE_THRESHOLD = 0.25;
+const CROP_SIZE = 64;
 
-const classifyExpression = (
-  face: DetectedFace,
-  frameSize: Vector2,
-  thresholds: ExpressionThresholds,
-): { id: ExpressionId | 'unknown'; features: ExpressionFeatures | null } => {
-  if (!face.landmarks?.length) {
-    return { id: 'unknown', features: null };
-  }
-
-  const bbox = face.boundingBox;
-  const mouthPoints = face.landmarks
-    .filter((landmark) => landmark.type === 'mouth')
-    .flatMap((landmark) => Array.from(landmark.locations));
-  const eyePoints = face.landmarks
-    .filter((landmark) => landmark.type === 'eye')
-    .flatMap((landmark) => Array.from(landmark.locations));
-
-  if (mouthPoints.length < 3 || eyePoints.length < 4) {
-    return { id: 'unknown', features: null };
-  }
-
-  const normalizeY = (value: number) => value / bbox.height;
-  const normalizeX = (value: number) => value / bbox.width;
-
-  const mouthMetrics = (() => {
-    const xs = mouthPoints.map((point) => point.x);
-    const ys = mouthPoints.map((point) => point.y);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-    const width = maxX - minX;
-    const height = maxY - minY;
-    const centerY = (maxY + minY) / 2;
-    const leftCorner = mouthPoints.reduce((prev, point) => (point.x < prev.x ? point : prev), mouthPoints[0]);
-    const rightCorner = mouthPoints.reduce((prev, point) => (point.x > prev.x ? point : prev), mouthPoints[0]);
-    const cornerAverageY = (leftCorner.y + rightCorner.y) / 2;
-    const curve = cornerAverageY - centerY;
-    return {
-      width: width / frameSize.x,
-      height: height / frameSize.y,
-      open: normalizeY(height),
-      curve: normalizeY(curve),
-    };
-  })();
-
-  const eyeMetrics = (() => {
-    const faceCenterX = bbox.x + bbox.width / 2;
-    const leftEye = eyePoints.filter((point) => point.x <= faceCenterX);
-    const rightEye = eyePoints.filter((point) => point.x > faceCenterX);
-
-    const aspectRatio = (points: LandmarkPoints): number => {
-      if (points.length < 2) {
-        return 0;
-      }
-      const xs = points.map((point) => point.x);
-      const ys = points.map((point) => point.y);
-      const width = Math.max(...xs) - Math.min(...xs);
-      const height = Math.max(...ys) - Math.min(...ys);
-      const normalizedWidth = normalizeX(width);
-      const normalizedHeight = normalizeY(height);
-      if (normalizedWidth <= 0) {
-        return 0;
-      }
-      return normalizedHeight / normalizedWidth;
-    };
-
-    const leftAspect = aspectRatio(leftEye);
-    const rightAspect = aspectRatio(rightEye);
-
-    return {
-      openness: (leftAspect + rightAspect) / 2,
-    };
-  })();
-
-  const features: ExpressionFeatures = {
-    mouthOpen: mouthMetrics.open,
-    mouthCurve: mouthMetrics.curve,
-    eyeOpenness: eyeMetrics.openness,
-  };
-
-  const smileScore = -features.mouthCurve;
-  const frownScore = features.mouthCurve;
-  const mouthOpen = features.mouthOpen;
-  const eyeOpen = features.eyeOpenness;
-
-  if (mouthOpen >= thresholds.surprise.minMouthOpen && eyeOpen >= thresholds.surprise.minEyeOpen) {
-    return { id: 'surprise', features };
-  }
-  if (smileScore >= thresholds.joy.minSmile && mouthOpen >= thresholds.joy.minMouthOpen) {
-    return { id: 'joy', features };
-  }
-  if (eyeOpen <= thresholds.anger.maxEyeOpen && mouthOpen <= thresholds.anger.maxMouthOpen) {
-    return { id: 'anger', features };
-  }
-  if (frownScore >= thresholds.sad.minFrown && mouthOpen <= thresholds.sad.maxMouthOpen) {
-    return { id: 'sad', features };
-  }
-
-  return { id: 'unknown', features };
+const joinBasePath = (base: string, path: string): string => {
+  const baseNormalized = base.replace(/\/+$/, '');
+  const keepTrailing = path.endsWith('/');
+  const pathNormalized = path.replace(/^\/+/, '').replace(/\/+$/, '');
+  const joined = `${baseNormalized}/${pathNormalized}`;
+  return keepTrailing ? `${joined}/` : joined;
 };
+
+const softmax = (values: Float32Array | number[]): number[] => {
+  const source = Array.isArray(values) ? values : Array.from(values);
+  let max = -Infinity;
+  for (let i = 0; i < source.length; i += 1) {
+    max = Math.max(max, source[i]);
+  }
+
+  const exps = source.map((value) => Math.exp(value - max));
+  const sum = exps.reduce((acc, value) => acc + value, 0);
+  const denominator = sum || 1;
+  return exps.map((value) => value / denominator);
+};
+
+const createDomRect = (x: number, y: number, width: number, height: number): DOMRectReadOnly =>
+  new DOMRectReadOnly(x, y, width, height);
 
 class EmotionScene extends Scene {
   private video: HTMLVideoElement | null = null;
   private stream: MediaStream | null = null;
-  private detector: FaceDetectorHandle | null = null;
+  private landmarker: FaceLandmarker | null = null;
+  private onnxSession: ort.InferenceSession | null = null;
   private detectionTimer = 0;
   private detecting = false;
+
+  private readonly cropCanvas: HTMLCanvasElement;
+  private readonly cropCtx: CanvasRenderingContext2D | null;
 
   private timeLeft = INITIAL_TIME;
   private score = 0;
   private combo = 0;
   private bestCombo = 0;
   private matchProgress = 0;
-  private target = EXPRESSIONS[0];
+  private target: ExpressionDefinition = EXPRESSIONS[0];
   private lastExpression: ExpressionId | 'unknown' = 'unknown';
-  private lastFeatures: ExpressionFeatures | null = null;
-  private lastFace: DetectedFace | null = null;
-  private status: string | null = null;
+  private lastConfidence = 0;
+  private lastBestProbability = 0;
+  private lastCompetitorProbability = 0;
+  private lastProbabilities: ExpressionProbabilities = {
+    neutral: 0,
+    joy: 0,
+    surprise: 0,
+    sad: 0,
+    anger: 0,
+  };
+  private lastBoundingBox: DOMRectReadOnly | null = null;
+  private status: string | null = 'カメラとモデルを初期化しています...';
   private gameOver = false;
   private removeInputListener: (() => void) | null = null;
-  private thresholds: ExpressionThresholds = JSON.parse(JSON.stringify(DEFAULT_THRESHOLDS));
-  private controlsContainer: HTMLDivElement | null = null;
+
+  constructor() {
+    super();
+    this.cropCanvas = document.createElement('canvas');
+    this.cropCanvas.width = CROP_SIZE;
+    this.cropCanvas.height = CROP_SIZE;
+    this.cropCtx = this.cropCanvas.getContext('2d', { willReadFrequently: true });
+  }
 
   async onEnter(context: SceneContext): Promise<void> {
     this.resetState();
     this.video = document.getElementById('camera-stream') as HTMLVideoElement | null;
     if (!this.video) {
-      this.status = 'ビデオ要素が見つかりません';
+      this.status = 'ビデオ要素が見つかりません。';
+      const blankProbabilities = Object.fromEntries(
+        EXPRESSIONS.map((expr) => [expr.id, 0]),
+      ) as ExpressionProbabilities;
+      blankProbabilities.neutral = 1;
+      this.lastProbabilities = blankProbabilities;
       return;
     }
 
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'user',
-          width: 640,
-          height: 480,
-        },
+        video: { facingMode: 'user', width: 640, height: 480 },
         audio: false,
       });
       this.video.srcObject = this.stream;
       await this.video.play();
     } catch (error) {
-      this.status = 'カメラの取得に失敗しました。権限を確認してください。';
       console.error(error);
+      this.status = 'カメラの取得に失敗しました。権限を確認してください。';
       return;
     }
 
-    const detectorCtor = getFaceDetectorConstructor();
-    if (!detectorCtor) {
-      this.status = 'FaceDetector API に対応したブラウザが必要です (Chrome / Edge 推奨)。';
+    try {
+      await this.initializeModels();
+    } catch (error) {
+      console.error(error);
+      this.status = '表情解析モジュールの初期化に失敗しました。ブラウザを再読み込みしてください。';
       return;
     }
 
-    this.detector = new detectorCtor({
-      maxDetectedFaces: 1,
-      fastMode: true,
-    });
-
+    this.status = 'ターゲットの表情を真似てゲージを満たそう！';
+    this.pickNextTarget();
     const input = context.input;
     this.removeInputListener = input.onInput((event) => this.handleInput(event));
-    this.pickNextTarget();
   }
 
   onExit(): void {
     this.cleanupStream();
     this.removeInputListener?.();
     this.removeInputListener = null;
-    this.destroyControls();
+    this.landmarker?.close();
+    this.landmarker = null;
+    this.onnxSession?.release?.();
+    this.onnxSession = null;
   }
 
   update(dt: number): void {
@@ -280,7 +178,7 @@ class EmotionScene extends Scene {
       return;
     }
 
-    if (!this.detector || !this.video || this.video.readyState < HTMLMediaElement.HAVE_ENOUGH_DATA) {
+    if (!this.landmarker || !this.onnxSession || !this.video || this.video.readyState < HTMLMediaElement.HAVE_ENOUGH_DATA) {
       return;
     }
 
@@ -309,12 +207,50 @@ class EmotionScene extends Scene {
       ctx.restore();
     }
 
-    if (this.lastFace) {
+    if (this.lastBoundingBox) {
       this.drawFaceOutline(ctx, canvas);
     }
 
     this.drawHud(ctx, canvas);
     this.drawStatus(ctx, canvas);
+  }
+
+  private async initializeModels(): Promise<void> {
+    if (!this.video) {
+      throw new Error('video not ready');
+    }
+
+    const baseUrl = import.meta.env.BASE_URL ?? '/';
+    const mediapipeWasmBase = joinBasePath(baseUrl, 'mediapipe/wasm/');
+    const faceModelPath = joinBasePath(baseUrl, 'mediapipe/face_landmarker.task');
+    const fileset = await FilesetResolver.forVisionTasks(mediapipeWasmBase);
+
+    this.landmarker = await FaceLandmarker.createFromOptions(fileset, {
+      baseOptions: {
+        modelAssetPath: faceModelPath,
+      },
+      runningMode: 'VIDEO',
+      numFaces: 1,
+      outputFaceBlendshapes: false,
+      outputFacialTransformationMatrixes: false,
+    });
+
+    ort.env.wasm.wasmPaths = joinBasePath(baseUrl, 'onnx/');
+    ort.env.wasm.simd = true;
+    ort.env.wasm.numThreads = 1;
+    ort.env.wasm.proxy = false;
+
+    const modelUrl = joinBasePath(baseUrl, 'models/ferplus.onnx');
+    const response = await fetch(modelUrl);
+    if (!response.ok) {
+      throw new Error(`モデルの取得に失敗しました (${response.status} ${response.statusText})`);
+    }
+    const modelBuffer = new Uint8Array(await response.arrayBuffer());
+
+    this.onnxSession = await ort.InferenceSession.create(modelBuffer, {
+      executionProviders: ['wasm'],
+      graphOptimizationLevel: 'all',
+    });
   }
 
   private resetState(): void {
@@ -323,22 +259,29 @@ class EmotionScene extends Scene {
     this.combo = 0;
     this.bestCombo = 0;
     this.matchProgress = 0;
-    this.target = EXPRESSIONS[0];
+    this.target = TARGET_EXPRESSIONS[0];
     this.lastExpression = 'unknown';
-    this.lastFeatures = null;
-    this.lastFace = null;
-    this.status = null;
+    this.lastConfidence = 0;
+    this.lastBestProbability = 0;
+    this.lastCompetitorProbability = 0;
+    this.lastProbabilities = {
+      neutral: 0,
+      joy: 0,
+      surprise: 0,
+      sad: 0,
+      anger: 0,
+    };
+    this.lastBoundingBox = null;
+    this.status = 'カメラとモデルを初期化しています...';
     this.gameOver = false;
     this.detectionTimer = 0;
-    if (!this.controlsContainer) {
-      this.initializeControls();
-    }
   }
 
   private handleInput(event: KeyboardEvent | PointerEvent): void {
     if (event instanceof PointerEvent && event.type === 'pointerdown') {
       if (this.gameOver) {
         this.resetState();
+        this.status = 'ターゲットの表情を真似てゲージを満たそう！';
         this.pickNextTarget();
       }
       return;
@@ -352,38 +295,75 @@ class EmotionScene extends Scene {
     if (key === ' ' || key === 'enter') {
       if (this.gameOver) {
         this.resetState();
+        this.status = 'ターゲットの表情を真似てゲージを満たそう！';
         this.pickNextTarget();
       }
     }
   }
 
   private async detectExpression(): Promise<void> {
-    if (!this.detector || !this.video) {
+    if (!this.landmarker || !this.onnxSession || !this.video || !this.cropCtx) {
       return;
     }
 
     this.detecting = true;
     try {
-      const faces = await this.detector.detect(this.video);
-      if (faces.length === 0) {
-        this.lastFace = null;
+      const result = this.landmarker.detectForVideo(this.video, performance.now());
+      if (!result || !result.faceLandmarks.length) {
+        this.lastBoundingBox = null;
         this.lastExpression = 'unknown';
-        this.lastFeatures = null;
-        this.matchProgress = Math.max(0, this.matchProgress - MATCH_DECAY_SPEED * DETECTION_INTERVAL);
+        this.lastConfidence = 0;
+        this.lastProbabilities = Object.fromEntries(
+          EXPRESSIONS.map((expr) => [expr.id, 0]),
+        ) as ExpressionProbabilities;
+        this.status = '顔を検出中...';
         return;
       }
 
-      const face = faces[0];
-      const frameSize = vec2(this.video.videoWidth || this.video.width, this.video.videoHeight || this.video.height);
-      const result = classifyExpression(face, frameSize, this.thresholds);
-      this.lastExpression = result.id;
-      this.lastFeatures = result.features;
-      this.lastFace = face;
+      const boundingBox = this.computeBoundingBox(result, this.video);
+      if (!boundingBox || boundingBox.width <= 0 || boundingBox.height <= 0) {
+        return;
+      }
 
-      if (result.id === this.target.id) {
-        this.matchProgress = Math.min(1, this.matchProgress + MATCH_FILL_SPEED * DETECTION_INTERVAL);
-      } else {
-        this.matchProgress = Math.max(0, this.matchProgress - MATCH_DECAY_SPEED * DETECTION_INTERVAL);
+      this.lastBoundingBox = boundingBox;
+      const prediction = await this.predictEmotion(boundingBox);
+      if (!prediction) {
+        return;
+      }
+
+      const neutralProbability = prediction.probabilities.neutral ?? 0;
+      const emotionRemainder = Math.max(1e-3, 1 - neutralProbability);
+      const adjustedProbabilities = Object.fromEntries(
+        EXPRESSIONS.map((expr) => {
+          if (expr.id === 'neutral') {
+            return [expr.id, neutralProbability];
+          }
+          const raw = prediction.probabilities[expr.id] ?? 0;
+          return [expr.id, Math.min(raw / emotionRemainder, 1)];
+        }),
+      ) as ExpressionProbabilities;
+
+      const nonNeutralOrder = TARGET_EXPRESSIONS
+        .map((expr) => ({ id: expr.id, value: adjustedProbabilities[expr.id] ?? 0 }))
+        .sort((a, b) => b.value - a.value);
+
+      const topEntry = nonNeutralOrder[0] ?? { id: 'joy', value: 0 };
+      const secondEntry = nonNeutralOrder[1] ?? { id: 'joy', value: 0 };
+
+      this.status = null;
+      this.lastExpression = topEntry.value >= CONFIDENCE_THRESHOLD ? topEntry.id : 'unknown';
+      const targetProbability = adjustedProbabilities[this.target.id] ?? 0;
+      this.lastConfidence = targetProbability;
+      this.lastBestProbability = topEntry.value;
+      this.lastCompetitorProbability = secondEntry.value;
+      this.lastProbabilities = adjustedProbabilities;
+
+      const competitorDiff = targetProbability - this.lastCompetitorProbability;
+
+      if (targetProbability >= MATCH_THRESHOLD && competitorDiff >= MATCH_MARGIN) {
+        const strength = Math.max(targetProbability - MATCH_THRESHOLD, 0.01);
+        const increment = strength * MATCH_FILL_SPEED * DETECTION_INTERVAL;
+        this.matchProgress = Math.min(1, this.matchProgress + increment);
       }
 
       if (this.matchProgress >= 0.999) {
@@ -391,10 +371,113 @@ class EmotionScene extends Scene {
       }
     } catch (error) {
       console.error(error);
-      this.status = '表情の解析に失敗しました。ブラウザを再読み込みしてください。';
+      this.status = '表情の解析中にエラーが発生しました。再読み込みしてください。';
     } finally {
       this.detecting = false;
     }
+  }
+
+  private computeBoundingBox(result: FaceLandmarkerResult, video: HTMLVideoElement): DOMRectReadOnly | null {
+    const landmarks = result.faceLandmarks?.[0];
+    if (!landmarks || landmarks.length === 0) {
+      return null;
+    }
+
+    const videoWidth = video.videoWidth || video.width;
+    const videoHeight = video.videoHeight || video.height;
+
+    const xs = landmarks.map((point) => point.x);
+    const ys = landmarks.map((point) => point.y);
+    const normalized = Math.max(...xs) <= 1 && Math.max(...ys) <= 1;
+
+    const toPixelX = (value: number) => (normalized ? value * videoWidth : value);
+    const toPixelY = (value: number) => (normalized ? value * videoHeight : value);
+
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    let left = toPixelX(minX);
+    let right = toPixelX(maxX);
+    let top = toPixelY(minY);
+    let bottom = toPixelY(maxY);
+
+    const width = right - left;
+    const height = bottom - top;
+    const paddingX = width * FACE_PADDING;
+    const paddingY = height * FACE_PADDING;
+
+    left = clamp(left - paddingX, 0, videoWidth);
+    top = clamp(top - paddingY, 0, videoHeight);
+    right = clamp(right + paddingX, 0, videoWidth);
+    bottom = clamp(bottom + paddingY, 0, videoHeight);
+
+    return createDomRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
+  }
+
+  private async predictEmotion(boundingBox: DOMRectReadOnly): Promise<EmotionPrediction | null> {
+    if (!this.video || !this.cropCtx || !this.onnxSession) {
+      return null;
+    }
+
+    this.cropCtx.drawImage(
+      this.video,
+      boundingBox.x,
+      boundingBox.y,
+      boundingBox.width,
+      boundingBox.height,
+      0,
+      0,
+      CROP_SIZE,
+      CROP_SIZE,
+    );
+
+    const imageData = this.cropCtx.getImageData(0, 0, CROP_SIZE, CROP_SIZE);
+    const data = imageData.data;
+    const tensorData = new Float32Array(CROP_SIZE * CROP_SIZE);
+
+    for (let index = 0; index < tensorData.length; index += 1) {
+      const offset = index * 4;
+      const r = data[offset];
+      const g = data[offset + 1];
+      const b = data[offset + 2];
+      const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+      tensorData[index] = gray;
+    }
+
+    const feeds: Record<string, ort.Tensor> = {};
+    feeds[this.onnxSession.inputNames[0]] = new ort.Tensor('float32', tensorData, [1, 1, CROP_SIZE, CROP_SIZE]);
+    const results = await this.onnxSession.run(feeds);
+    const outputName = this.onnxSession.outputNames[0];
+    const output = results[outputName];
+    if (!output) {
+      return null;
+    }
+
+    const logits = Array.from((output as ort.Tensor).data as Float32Array);
+    const probabilitiesRaw = softmax(logits);
+
+    const probabilities: ExpressionProbabilities = Object.fromEntries(
+      EXPRESSIONS.map((expr) => {
+        const index = FER_TO_EXPRESSION[expr.id];
+        return [expr.id, probabilitiesRaw[index] ?? 0];
+      }),
+    ) as ExpressionProbabilities;
+
+    const entries = (Object.entries(probabilities) as Array<[ExpressionId, number]>).filter(
+      ([id]) => id !== 'neutral',
+    ) as Array<[Exclude<ExpressionId, 'neutral'>, number]>;
+    entries.sort((a, b) => b[1] - a[1]);
+    const [bestId, bestScore] = entries[0];
+    const competitorScore = entries.length > 1 ? entries[1][1] : 0;
+
+    return {
+      id: bestScore >= CONFIDENCE_THRESHOLD ? bestId : 'unknown',
+      confidence: bestScore,
+      competitor: competitorScore,
+      probabilities,
+    };
   }
 
   private onSuccessMatch(): void {
@@ -408,16 +491,17 @@ class EmotionScene extends Scene {
   }
 
   private pickNextTarget(): void {
-    const nextCandidates = EXPRESSIONS.filter((expression) => expression.id !== this.target.id);
+    const nextCandidates = TARGET_EXPRESSIONS.filter((expression) => expression.id !== this.target.id);
     const randomIndex = Math.floor(Math.random() * nextCandidates.length);
-    this.target = nextCandidates[randomIndex];
+    this.target = nextCandidates[randomIndex] ?? TARGET_EXPRESSIONS[0];
   }
 
   private drawFaceOutline(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {
-    if (!this.video || !this.lastFace) {
+    if (!this.video || !this.lastBoundingBox) {
       return;
     }
-    const bbox = this.lastFace.boundingBox;
+
+    const bbox = this.lastBoundingBox;
     const scaleX = canvas.width / (this.video.videoWidth || this.video.width || canvas.width);
     const scaleY = canvas.height / (this.video.videoHeight || this.video.height || canvas.height);
     const x = canvas.width - (bbox.x + bbox.width) * scaleX;
@@ -430,15 +514,13 @@ class EmotionScene extends Scene {
     ctx.lineWidth = 3;
     ctx.strokeRect(x, y, width, height);
     ctx.restore();
-
-    this.drawLandmarks(ctx, canvas, scaleX, scaleY);
   }
 
   private drawHud(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {
     ctx.save();
     ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
     ctx.fillRect(20, 20, 200, 120);
-    ctx.fillRect(canvas.width - 240, 20, 220, 160);
+    ctx.fillRect(canvas.width - 240, 20, 220, 260);
 
     ctx.fillStyle = '#f8fafc';
     ctx.font = '22px/1.3 "Noto Sans JP", system-ui, sans-serif';
@@ -454,11 +536,13 @@ class EmotionScene extends Scene {
     ctx.fillText(`スコア: ${this.score}`, canvas.width - 24, 52);
     ctx.fillText(`のこり時間: ${Math.ceil(this.timeLeft)}s`, canvas.width - 24, 84);
     ctx.fillText(`コンボ: ${this.combo} (ベスト ${this.bestCombo})`, canvas.width - 24, 116);
-    ctx.fillText(
-      `判定: ${this.lastExpression === 'unknown' ? '---' : EXPRESSIONS.find((expr) => expr.id === this.lastExpression)?.label ?? '---'}`,
-      canvas.width - 24,
-      148,
-    );
+    const expressionLabel = this.lastExpression === 'unknown'
+      ? '---'
+      : EXPRESSIONS.find((expr) => expr.id === this.lastExpression)?.label ?? '---';
+    ctx.fillText(`判定: ${expressionLabel}`, canvas.width - 24, 148);
+    ctx.fillText(`ターゲット確率: ${(this.lastConfidence * 100).toFixed(1)}%`, canvas.width - 24, 180);
+    ctx.fillText(`最大確率: ${(this.lastBestProbability * 100).toFixed(1)}%`, canvas.width - 24, 212);
+    ctx.fillText(`次点確率: ${(this.lastCompetitorProbability * 100).toFixed(1)}%`, canvas.width - 24, 244);
     ctx.textAlign = 'left';
 
     const barWidth = canvas.width - 80;
@@ -475,17 +559,17 @@ class EmotionScene extends Scene {
     ctx.font = '18px/1.2 "Noto Sans JP", system-ui, sans-serif';
     ctx.fillText('ターゲットと一致するとゲージが満タンになります', barX, barY - 8);
 
-    if (this.lastFeatures) {
-      ctx.font = '16px/1.2 "Noto Sans JP", system-ui, sans-serif';
-      const features = this.lastFeatures;
-      ctx.fillText(
-        `mouthOpen: ${(features.mouthOpen * 100).toFixed(1)}%`,
-        32,
-        canvas.height - 120,
-      );
-      ctx.fillText(`mouthCurve: ${(features.mouthCurve * 100).toFixed(2)}%`, 32, canvas.height - 96);
-      ctx.fillText(`eyeOpen: ${(features.eyeOpenness * 100).toFixed(1)}%`, 32, canvas.height - 72);
-    }
+    ctx.font = '16px/1.2 "Noto Sans JP", system-ui, sans-serif';
+    const probabilityEntries: Array<[ExpressionDefinition, number]> = EXPRESSIONS.map((expr) => [
+      expr,
+      this.lastProbabilities[expr.id],
+    ]);
+    probabilityEntries.sort((a, b) => b[1] - a[1]);
+    const startY = canvas.height - 140;
+    probabilityEntries.forEach(([expr, probability], index) => {
+      ctx.fillStyle = expr.id === this.target.id ? '#facc15' : '#f8fafc';
+      ctx.fillText(`${expr.label}: ${(probability * 100).toFixed(1)}%`, 32, startY + index * 20);
+    });
 
     ctx.restore();
   }
@@ -515,148 +599,6 @@ class EmotionScene extends Scene {
       this.video.srcObject = null;
       this.video = null;
     }
-  }
-
-  private drawLandmarks(
-    ctx: CanvasRenderingContext2D,
-    canvas: HTMLCanvasElement,
-    scaleX: number,
-    scaleY: number,
-  ): void {
-    const face = this.lastFace;
-    const video = this.video;
-    if (!face || !video || !face.landmarks) {
-      return;
-    }
-
-    const projectPoint = (point: DOMPointReadOnly): Vector2 => {
-      const mirroredX = canvas.width - point.x * scaleX;
-      const y = point.y * scaleY;
-      return vec2(mirroredX, y);
-    };
-
-    const drawPoint = (point: Vector2, color: string): void => {
-      ctx.beginPath();
-      ctx.fillStyle = color;
-      ctx.arc(point.x, point.y, 3, 0, Math.PI * 2);
-      ctx.fill();
-    };
-
-    face.landmarks.forEach((landmark) => {
-      const locations = landmark.locations ?? [];
-      if (locations.length === 0) {
-        return;
-      }
-
-      const color =
-        landmark.type === 'mouth'
-          ? '#f97316'
-          : landmark.type === 'eye'
-            ? '#38bdf8'
-            : '#facc15';
-
-      const projected = locations.map(projectPoint);
-
-      ctx.save();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(projected[0].x, projected[0].y);
-      for (let i = 1; i < projected.length; i += 1) {
-        ctx.lineTo(projected[i].x, projected[i].y);
-      }
-      if (landmark.type === 'mouth' || landmark.type === 'eye') {
-        ctx.closePath();
-      }
-      ctx.stroke();
-      ctx.restore();
-
-      projected.forEach((point) => drawPoint(point, color));
-    });
-  }
-
-  private initializeControls(): void {
-    this.destroyControls();
-
-    const container = document.createElement('div');
-    container.className = 'threshold-panel';
-
-    const title = document.createElement('h2');
-    title.textContent = 'Expression Thresholds';
-    container.appendChild(title);
-
-    type Control = {
-      label: string;
-      path: readonly [keyof ExpressionThresholds, string];
-      min: number;
-      max: number;
-      step: number;
-    };
-
-    const controls: Control[] = [
-      { label: 'Joy: Min Smile Curve (%)', path: ['joy', 'minSmile'], min: 0, max: 0.1, step: 0.005 },
-      { label: 'Joy: Min Mouth Open (%)', path: ['joy', 'minMouthOpen'], min: 0, max: 0.3, step: 0.01 },
-      { label: 'Anger: Max Eye Open (%)', path: ['anger', 'maxEyeOpen'], min: 0, max: 0.4, step: 0.01 },
-      { label: 'Anger: Max Mouth Open (%)', path: ['anger', 'maxMouthOpen'], min: 0, max: 0.3, step: 0.01 },
-      { label: 'Sad: Min Frown Curve (%)', path: ['sad', 'minFrown'], min: 0, max: 0.1, step: 0.005 },
-      { label: 'Sad: Max Mouth Open (%)', path: ['sad', 'maxMouthOpen'], min: 0, max: 0.3, step: 0.01 },
-      { label: 'Surprise: Min Mouth Open (%)', path: ['surprise', 'minMouthOpen'], min: 0, max: 0.5, step: 0.01 },
-      { label: 'Surprise: Min Eye Open (%)', path: ['surprise', 'minEyeOpen'], min: 0, max: 0.5, step: 0.01 },
-    ];
-
-    controls.forEach(({ label, path, min, max, step }) => {
-      const wrapper = document.createElement('label');
-      wrapper.className = 'threshold-item';
-
-      const text = document.createElement('span');
-      text.textContent = label;
-
-      const valueSpan = document.createElement('code');
-      valueSpan.className = 'threshold-value';
-
-      const input = document.createElement('input');
-      input.type = 'range';
-      input.min = String(min);
-      input.max = String(max);
-      input.step = String(step);
-      input.value = String(this.getThresholdValue(path));
-
-      const updateValue = (value: number) => {
-        this.setThresholdValue(path, value);
-        valueSpan.textContent = `${(value * 100).toFixed(1)}%`;
-      };
-
-      input.addEventListener('input', () => {
-        updateValue(Number.parseFloat(input.value));
-      });
-
-      updateValue(Number.parseFloat(input.value));
-
-      wrapper.appendChild(text);
-      wrapper.appendChild(input);
-      wrapper.appendChild(valueSpan);
-      container.appendChild(wrapper);
-    });
-
-    document.body.appendChild(container);
-    this.controlsContainer = container;
-  }
-
-  private destroyControls(): void {
-    if (this.controlsContainer?.parentNode) {
-      this.controlsContainer.parentNode.removeChild(this.controlsContainer);
-    }
-    this.controlsContainer = null;
-  }
-
-  private getThresholdValue(path: readonly [keyof ExpressionThresholds, string]): number {
-    const [group, key] = path;
-    return (this.thresholds[group] as Record<string, number>)[key];
-  }
-
-  private setThresholdValue(path: readonly [keyof ExpressionThresholds, string], value: number): void {
-    const [group, key] = path;
-    (this.thresholds[group] as Record<string, number>)[key] = value;
   }
 }
 
