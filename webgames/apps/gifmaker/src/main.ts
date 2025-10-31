@@ -247,8 +247,8 @@ const autoEncodeWithLimit = async (
   options: ConversionOptions,
   signal: AbortSignal,
 ): Promise<{ blob: Blob; width: number; fps: number; iterations: number }> => {
-  let width = options.width;
-  let fps = options.fps;
+  let width = Math.max(160, Math.round(options.width));
+  let fps = Math.max(1, Math.round(options.fps));
   let iterations = 0;
   let lastBlob: Blob | null = null;
   while (width >= 160 && fps >= 5) {
@@ -290,9 +290,9 @@ controls.convert.addEventListener('click', async () => {
     controls.video.pause();
     controls.video.currentTime = 0;
     const options: ConversionOptions = {
-      width: Number.parseInt(controls.width.value, 10),
-      fps: Number.parseInt(controls.fps.value, 10),
-      quality: Number.parseInt(controls.quality.value, 10),
+      width: sanitizeNumberInput(controls.width.value, controls.video.videoWidth || 480, 160, 960),
+      fps: sanitizeNumberInput(controls.fps.value, 12, 1, 60),
+      quality: sanitizeNumberInput(controls.quality.value, 6, 1, 8),
     };
     const result = await autoEncodeWithLimit(controls.video, options, abortController.signal);
     const url = URL.createObjectURL(result.blob);
@@ -351,6 +351,14 @@ const formatBytes = (bytes: number): string => {
     return `${(bytes / 1024).toFixed(1)}KB`;
   }
   return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
+};
+
+const sanitizeNumberInput = (raw: string, fallback: number, min = 0, max = Number.POSITIVE_INFINITY): number => {
+  const value = Number.parseFloat(raw);
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.min(Math.max(value, min), max);
 };
 
 resetPreview();
