@@ -63,8 +63,10 @@ type FFmpegModule = {
 let ffmpegInstance: FFmpegInstance | null = null;
 let fetchFileFn: FetchFile | null = null;
 let ffmpegLoadingPromise: Promise<void> | null = null;
-
-const CORE_PATH = 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-core/0.12.10/esm/ffmpeg-core.js';
+const FFmpeg_SOURCES = [
+  { module: 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.15/esm/index.js', core: 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-core/0.12.10/esm/ffmpeg-core.js' },
+  { module: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/esm/index.js', core: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js' },
+];
 
 const resetFFmpeg = (): void => {
   ffmpegInstance = null;
@@ -81,20 +83,31 @@ const loadFFmpeg = async (): Promise<void> => {
   }
 
   ffmpegLoadingPromise = (async () => {
-    setStatus('FFmpeg モジュールを読み込んでいます...');
-    const module = (await import(/* @vite-ignore */ 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.15/esm/index.js')) as FFmpegModule;
-    const createFFmpeg = module.createFFmpeg ?? module.default?.createFFmpeg;
-    const fetchFile = module.fetchFile ?? module.default?.fetchFile;
-    if (!createFFmpeg || !fetchFile) {
-      throw new Error('FFmpeg モジュールの読み込みに失敗しました');
+    let lastError: unknown = null;
+    for (const source of FFmpeg_SOURCES) {
+      try {
+        setStatus(`FFmpeg モジュールを読み込んでいます...`);
+        const module = (await import(/* @vite-ignore */ source.module)) as FFmpegModule;
+        const createFFmpeg = module.createFFmpeg ?? module.default?.createFFmpeg;
+        const fetchFile = module.fetchFile ?? module.default?.fetchFile;
+        if (!createFFmpeg || !fetchFile) {
+          throw new Error('createFFmpeg が見つかりません');
+        }
+        fetchFileFn = fetchFile;
+        const instance = createFFmpeg({ log: false, corePath: source.core });
+        instance.setProgress?.(({ ratio }) => {
+          setStatus(`FFmpeg 変換中... ${(ratio * 100).toFixed(1)}%`);
+        });
+        await instance.load();
+        ffmpegInstance = instance;
+        return;
+      } catch (error) {
+        console.warn('FFmpeg load failed for', source.module, error);
+        lastError = error;
+        resetFFmpeg();
+      }
     }
-    fetchFileFn = fetchFile;
-    const instance = createFFmpeg({ log: false, corePath: CORE_PATH });
-    instance.setProgress?.(({ ratio }) => {
-      setStatus(`FFmpeg 変換中... ${(ratio * 100).toFixed(1)}%`);
-    });
-    await instance.load();
-    ffmpegInstance = instance;
+    throw lastError ?? new Error('FFmpeg モジュールの読み込みに失敗しました');
   })();
 
   try {
@@ -102,7 +115,7 @@ const loadFFmpeg = async (): Promise<void> => {
   } finally {
     ffmpegLoadingPromise = null;
   }
-};
+};;
 
 const updateRangeLabels = (): void => {
   widthValue.textContent = `${controls.width.value}px`;
