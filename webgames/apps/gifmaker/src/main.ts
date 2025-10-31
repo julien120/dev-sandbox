@@ -90,18 +90,77 @@ const handleFile = (file: File): void => {
   };
 };
 
+const extractFileFromDataTransfer = (dt: DataTransfer | null): File | null => {
+  if (!dt) {
+    return null;
+  }
+
+  if (dt.files && dt.files.length > 0) {
+    return dt.files[0] ?? null;
+  }
+
+  if (dt.items) {
+    for (const item of Array.from(dt.items)) {
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file) {
+          return file;
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
 const handleDrop = (event: DragEvent): void => {
   event.preventDefault();
   dropzone.classList.remove('drag-over');
-  if (event.dataTransfer?.files?.length) {
-    handleFile(event.dataTransfer.files[0]);
+  const file = extractFileFromDataTransfer(event.dataTransfer ?? null);
+  if (file) {
+    handleFile(file);
+  } else {
+    setStatus('ファイルをドロップしてください。フォルダは利用できません。', true);
+  }
+};
+
+const once = <T extends keyof HTMLVideoElementEventMap>(
+  target: HTMLVideoElement,
+  type: T,
+): Promise<HTMLVideoElementEventMap[T]> => {
+  return new Promise((resolve) => {
+    const handler = (event: Event) => {
+      target.removeEventListener(type, handler);
+      resolve(event as HTMLVideoElementEventMap[T]);
+    };
+    target.addEventListener(type, handler, { once: true });
+  });
+};
+
+const ensureVideoReady = async (video: HTMLVideoElement): Promise<void> => {
+  if (video.readyState < HTMLMediaElement.HAVE_METADATA) {
+    await once(video, 'loadedmetadata');
+  }
+
+  if (video.videoWidth === 0 || video.videoHeight === 0) {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
+
+  if (video.videoWidth === 0 || video.videoHeight === 0) {
+    throw new Error('動画のメタデータを取得できませんでした。別のファイルでお試しください。');
+  }
+
+  if (!Number.isFinite(video.duration) || video.duration <= 0) {
+    throw new Error('動画の長さが不正です。');
   }
 };
 
 const generateGif = async (video: HTMLVideoElement, options: ConversionOptions, signal: AbortSignal): Promise<Blob> => {
-  const targetWidth = options.width;
+  await ensureVideoReady(video);
+
+  const targetWidth = Math.max(1, Math.round(options.width));
   const aspect = video.videoHeight / video.videoWidth;
-  const targetHeight = Math.round(targetWidth * aspect);
+  const targetHeight = Math.max(1, Math.round(targetWidth * aspect));
   controls.canvas.width = targetWidth;
   controls.canvas.height = targetHeight;
   const ctx = controls.canvas.getContext('2d');
@@ -111,25 +170,32 @@ const generateGif = async (video: HTMLVideoElement, options: ConversionOptions, 
 
   const encoder = new GIFEncoder(targetWidth, targetHeight);
   encoder.setRepeat(0);
-  encoder.setDelay(Math.round(1000 / options.fps));
+  encoder.setDelay(Math.round(1000 / Math.max(1, options.fps)));
   encoder.setQuality(options.quality);
   encoder.start();
 
   const duration = video.duration;
-  const totalFrames = Math.max(1, Math.floor(duration * options.fps));
-  const displayDelay = Math.round(1000 / options.fps);
+  const sanitizedFps = Math.max(1, options.fps);
+  const totalFrames = Math.max(1, Math.floor(duration * sanitizedFps));
+  const displayDelay = Math.round(1000 / sanitizedFps);
   encoder.setDelay(displayDelay);
 
+  let processedFrames = 0;
   for (let frame = 0; frame < totalFrames; frame += 1) {
     if (signal.aborted) {
       throw new Error('処理が中断されました。');
     }
-    const currentTime = Math.min(duration, (frame / options.fps));
+    const currentTime = Math.min(duration, frame / sanitizedFps);
     await seekVideo(video, currentTime);
     ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
     encoder.addFrame(ctx);
     setStatus(`フレームを処理中... (${frame + 1}/${totalFrames})`);
     await waitNextFrame();
+    processedFrames += 1;
+  }
+
+  if (processedFrames === 0) {
+    throw new Error('GIF に変換できるフレームが生成されませんでした。');
   }
 
   encoder.finish();
@@ -139,21 +205,10 @@ const generateGif = async (video: HTMLVideoElement, options: ConversionOptions, 
   return new Blob([copied.buffer], { type: 'image/gif' });
 };
 
-const seekVideo = (video: HTMLVideoElement, time: number): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    const onSeeked = (): void => {
-      video.removeEventListener('seeked', onSeeked);
-      video.removeEventListener('error', onError);
-      resolve();
-    };
-    const onError = (): void => {
-      video.removeEventListener('seeked', onSeeked);
-      video.removeEventListener('error', onError);
-      reject(new Error('動画のシークに失敗しました。'));
-    };
-    video.addEventListener('seeked', onSeeked, { once: true });
-    video.addEventListener('error', onError, { once: true });
-    video.currentTime = time;
+const seekVideo = async (video: HTMLVideoElement, time: number): Promise<void> => {
+  video.currentTime = time;
+  await once(video, 'seeked').catch(() => {
+    throw new Error('動画のシークに失敗しました。');
   });
 };
 
