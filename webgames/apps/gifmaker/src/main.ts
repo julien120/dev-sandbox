@@ -64,8 +64,8 @@ let ffmpegInstance: FFmpegInstance | null = null;
 let fetchFileFn: FetchFile | null = null;
 let ffmpegLoadingPromise: Promise<void> | null = null;
 const FFmpeg_SOURCES = [
-  { module: 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.15/esm/index.js', core: 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-core/0.12.10/esm/ffmpeg-core.js' },
   { module: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/esm/index.js', core: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js' },
+  { module: 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.6/esm/index.js', core: 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-core/0.12.6/esm/ffmpeg-core.js' },
 ];
 
 const resetFFmpeg = (): void => {
