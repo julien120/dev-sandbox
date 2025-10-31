@@ -6,6 +6,7 @@ export default defineConfig({
   build: {
     outDir: '../../dist/gifmaker',
     emptyOutDir: false,
+    assetsInlineLimit: 0,
   },
   resolve: {
     alias: {

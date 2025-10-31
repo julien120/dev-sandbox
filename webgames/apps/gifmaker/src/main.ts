@@ -1,4 +1,4 @@
-import type { FFmpeg } from '@ffmpeg/ffmpeg';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
 import './style.css';
 
 const MAX_SIZE_BYTES = 10 * 1024 * 1024;
@@ -81,20 +81,20 @@ const loadFFmpeg = async (): Promise<void> => {
   }
 
   ffmpegLoadingPromise = (async () => {
-    setStatus(`FFmpeg モジュールを読み込んでいます...`);
-    const { FFmpeg: FFmpegConstructor } = (await import('@ffmpeg/ffmpeg')) as {
-      FFmpeg: new () => FFmpeg;
-    };
-    if (typeof FFmpegConstructor !== 'function') {
-      throw new Error('FFmpeg クラスが見つかりませんでした。');
-    }
-    const instance = new FFmpegConstructor();
+    setStatus('FFmpeg モジュールを読み込んでいます...');
+    const instance = new FFmpeg();
     instance.on('progress', handleFFmpegProgress);
+    console.info('[gifmaker] loading ffmpeg', {
+      coreURL: CORE_JS_URL,
+      wasmURL: CORE_WASM_URL,
+      workerURL: CORE_WORKER_URL,
+    });
     await instance.load({
       coreURL: CORE_JS_URL,
       wasmURL: CORE_WASM_URL,
       workerURL: CORE_WORKER_URL,
     });
+    console.info('[gifmaker] ffmpeg loaded');
     ffmpegInstance = instance;
   })();
 
@@ -252,9 +252,12 @@ const generateGif = async (file: File, options: ConversionOptions, signal: Abort
   try {
     setStatus('FFmpeg で GIF を生成しています...');
     const source = await toUint8Array(file);
+    console.info('[gifmaker] writeFile', { inputName, byteLength: source.byteLength });
     await ffmpeg.writeFile(inputName, source);
     const filter = createFilterPipeline(sanitizedFps, sanitizedWidth, sanitizedQuality);
-    const exitCode = await ffmpeg.exec(['-i', inputName, '-vf', filter, '-loop', '0', outputName]);
+    const args = ['-i', inputName, '-vf', filter, '-loop', '0', outputName];
+    console.info('[gifmaker] exec', { args });
+    const exitCode = await ffmpeg.exec(args);
     if (exitCode !== 0) {
       throw new Error(`FFmpeg の実行に失敗しました (コード: ${exitCode})。`);
     }
@@ -265,11 +268,13 @@ const generateGif = async (file: File, options: ConversionOptions, signal: Abort
         : new TextEncoder().encode(typeof data === 'string' ? data : String(data));
     const normalizedArray = new Uint8Array(binaryArray.byteLength);
     normalizedArray.set(binaryArray);
+    console.info('[gifmaker] readFile', { outputName, size: normalizedArray.byteLength });
     return new Blob([normalizedArray.buffer], { type: 'image/gif' });
   } catch (error) {
     if (aborted) {
       throw new Error('処理が中断されました。');
     }
+    console.error('[gifmaker] ffmpeg error', error);
     resetFFmpeg();
     throw error;
   } finally {
@@ -331,7 +336,8 @@ controls.convert.addEventListener('click', async () => {
   if (abortController) {
     abortController.abort();
   }
-  abortController = new AbortController();
+  const currentController = new AbortController();
+  abortController = currentController;
   controls.convert.disabled = true;
   controls.download.setAttribute('aria-disabled', 'true');
   controls.download.removeAttribute('href');
@@ -346,7 +352,7 @@ controls.convert.addEventListener('click', async () => {
       fps: sanitizeNumberInput(controls.fps.value, 12, 1, 60),
       quality: sanitizeNumberInput(controls.quality.value, 6, 1, 8),
     };
-    const result = await autoEncodeWithLimit(currentFile, options, abortController.signal);
+    const result = await autoEncodeWithLimit(currentFile, options, currentController.signal);
     const url = URL.createObjectURL(result.blob);
     controls.download.href = url;
     controls.download.download = `${currentFile.name.replace(/\.[^.]+$/, '') || 'output'}.gif`;
@@ -361,8 +367,10 @@ controls.convert.addEventListener('click', async () => {
     console.error(error);
     setStatus(error instanceof Error ? error.message : '変換中にエラーが発生しました。', true);
   } finally {
+    if (abortController === currentController) {
+      abortController = null;
+    }
     controls.convert.disabled = false;
-    abortController = null;
   }
 });
 
