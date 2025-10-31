@@ -6,6 +6,7 @@ import suikaThumbnail from '../../assets/suika-placeholder.svg?url';
 import tetrisThumbnail from '../../assets/tetris-placeholder.svg?url';
 import gifmakerThumbnail from '../../assets/gifmaker-placeholder.svg?url';
 import ramenThumbnail from '../../assets/ramen-placeholder.svg?url';
+import vjThumbnail from '../../assets/vj-placeholder.svg?url';
 
 type GameSummary = {
   slug: string;
@@ -72,6 +73,14 @@ const games: GameSummary[] = [
     description: '三次元のラーメンをドラッグで回し、角度を変えて眺めるビジュアルツール。',
     thumbnail: ramenThumbnail,
     controls: 'ドラッグで回転、ホイールでズーム、スペースでリセット',
+  },
+  {
+    slug: 'vj',
+    url: '/dev-sandbox/tools/vj/',
+    title: 'Tone VJ Studio',
+    description: 'Tone.js と 3D 演出で音と映像が連動するインタラクティブな VJ ツール。',
+    thumbnail: vjThumbnail,
+    controls: 'クリックで開始、マウス移動で音色とカメラ、クリックでアクセント、スペースでコード変更',
   },
 ];
 
