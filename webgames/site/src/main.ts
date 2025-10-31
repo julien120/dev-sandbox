@@ -5,7 +5,7 @@ import emotionThumbnail from '../../assets/emotion-placeholder.svg?url';
 import suikaThumbnail from '../../assets/suika-placeholder.svg?url';
 import tetrisThumbnail from '../../assets/tetris-placeholder.svg?url';
 import gifmakerThumbnail from '../../assets/gifmaker-placeholder.svg?url';
-import ramenThumbnail from '../../assets/gifmaker-placeholder.svg?url';
+import ramenThumbnail from '../../assets/ramen-placeholder.svg?url';
 
 type GameSummary = {
   slug: string;

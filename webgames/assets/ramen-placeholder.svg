@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="320" height="180" viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="160" y1="0" x2="160" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#f97316"/>
+    </linearGradient>
+    <linearGradient id="soup" x1="160" y1="90" x2="160" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fcd34d"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="24" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <ellipse cx="160" cy="108" rx="88" ry="48" fill="#111827"/>
+    <ellipse cx="160" cy="104" rx="80" ry="40" fill="#1f2937"/>
+    <ellipse cx="160" cy="100" rx="72" ry="32" fill="url(#soup)"/>
+    <path d="M96 86c20 8 48 12 64 12s44-4 64-12" stroke="#fef3c7" stroke-width="5" stroke-linecap="round"/>
+    <path d="M120 94c18 6 28 6 40 4M120 102c18 6 28 6 40 4M160 102c18 6 28 6 40 4M160 94c18 6 28 6 40 4" stroke="#ede9fe" stroke-width="4" stroke-linecap="round" opacity="0.65"/>
+    <ellipse cx="130" cy="92" rx="16" ry="10" fill="#fcd34d" transform="rotate(-12 130 92)"/>
+    <ellipse cx="202" cy="96" rx="18" ry="12" fill="#f97316" transform="rotate(8 202 96)"/>
+    <ellipse cx="172" cy="88" rx="12" ry="16" fill="#10b981" transform="rotate(-18 172 88)"/>
+  </g>
+  <filter id="shadow" x="60" y="54" width="200" height="110" filterUnits="userSpaceOnUse">
+    <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.35"/>
+  </filter>
+</svg>
