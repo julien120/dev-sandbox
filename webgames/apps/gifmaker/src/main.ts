@@ -1,5 +1,4 @@
 import './style.css';
-import { GIFEncoder } from './gifEncoder';
 
 const MAX_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -40,6 +39,57 @@ const fileInput = document.getElementById('file-input') as HTMLInputElement;
 
 let currentFile: File | null = null;
 let objectUrl: string | null = null;
+
+type FFmpegInstance = {
+  isLoaded: () => boolean;
+  load: () => Promise<void>;
+  run: (...args: string[]) => Promise<void>;
+  FS: (type: string, ...args: unknown[]) => unknown;
+  exit: () => void;
+  setProgress?: (cb: (progress: { ratio: number }) => void) => void;
+};
+
+type FetchFile = (input: File | string | ArrayBuffer | ArrayBufferView) => Promise<Uint8Array>;
+
+let ffmpegInstance: FFmpegInstance | null = null;
+let fetchFileFn: FetchFile | null = null;
+let ffmpegLoadingPromise: Promise<void> | null = null;
+
+const resetFFmpeg = (): void => {
+  ffmpegInstance = null;
+  fetchFileFn = null;
+};
+
+const loadFFmpeg = async (): Promise<void> => {
+  if (ffmpegInstance) {
+    return;
+  }
+  if (ffmpegLoadingPromise) {
+    await ffmpegLoadingPromise;
+    return;
+  }
+
+  ffmpegLoadingPromise = (async () => {
+    setStatus('FFmpeg モジュールを読み込んでいます...');
+    const { createFFmpeg, fetchFile } = (await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.9/dist/esm/index.js')) as {
+      createFFmpeg: (options?: { log?: boolean }) => FFmpegInstance;
+      fetchFile: FetchFile;
+    };
+    fetchFileFn = fetchFile;
+    const instance = createFFmpeg({ log: false });
+    instance.setProgress?.(({ ratio }) => {
+      setStatus(`FFmpeg 変換中... ${(ratio * 100).toFixed(1)}%`);
+    });
+    await instance.load();
+    ffmpegInstance = instance;
+  })();
+
+  try {
+    await ffmpegLoadingPromise;
+  } finally {
+    ffmpegLoadingPromise = null;
+  }
+};
 
 const updateRangeLabels = (): void => {
   widthValue.textContent = `${controls.width.value}px`;
@@ -156,118 +206,115 @@ const ensureVideoReady = async (video: HTMLVideoElement): Promise<void> => {
 };
 
 
-const extractFramesBySeeking = async (
-  video: HTMLVideoElement,
-  fps: number,
-  outWidth: number,
-  signal: AbortSignal,
-): Promise<{ bitmaps: ImageBitmap[]; width: number; height: number }> => {
-  await ensureVideoReady(video);
+const createFilterPipeline = (fps: number, width: number, quality: number): string => {
+  const ditherModes = [
+    'none',
+    'floyd_steinberg',
+    'sierra2',
+    'sierra2_4a',
+    'bayer:bayer_scale=5:diffusion=1',
+    'bayer:bayer_scale=4:diffusion=1',
+    'bayer:bayer_scale=3:diffusion=1',
+    'bayer:bayer_scale=2:diffusion=1',
+  ];
+  const index = Math.min(ditherModes.length - 1, Math.max(0, Math.round(quality) - 1));
+  const dither = ditherModes[index];
+  return `fps=${fps},scale=${width}:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=full[p];[b][p]paletteuse=dither=${dither}`;
+};
 
-  const sanitizedFps = Math.max(1, fps);
-  const duration = video.duration;
-  if (!Number.isFinite(duration) || duration <= 0) {
-    throw new Error('動画の長さが不正です。');
+const generateGif = async (file: File, options: ConversionOptions, signal: AbortSignal): Promise<Blob> => {
+  await loadFFmpeg();
+  const ffmpeg = ffmpegInstance;
+  const fetchFile = fetchFileFn;
+  if (!ffmpeg || !fetchFile) {
+    throw new Error('FFmpeg の初期化に失敗しました。');
   }
 
-  const canvas = document.createElement('canvas');
-  const scale = Math.max(1, outWidth) / video.videoWidth;
-  const targetWidth = Math.max(1, Math.round(video.videoWidth * scale));
-  const targetHeight = Math.max(1, Math.round(video.videoHeight * scale));
-  canvas.width = targetWidth;
-  canvas.height = targetHeight;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) {
-    throw new Error('Canvas が利用できません。');
-  }
+  const sanitizedWidth = Math.max(160, Math.round(options.width));
+  const sanitizedFps = Math.max(1, Math.round(options.fps));
+  const sanitizedQuality = Math.max(1, Math.round(options.quality));
+  const inputName = `input-${Date.now()}.mp4`;
+  const outputName = `output-${Date.now()}.gif`;
 
-  const bitmaps: ImageBitmap[] = [];
-  const step = 1 / sanitizedFps;
-  for (let t = 0; t < duration; t += step) {
-    if (signal.aborted) {
-      bitmaps.forEach((bitmap) => bitmap.close?.());
+  let aborted = false;
+  const abortHandler = (): void => {
+    aborted = true;
+    try {
+      ffmpeg.exit();
+    } catch (error) {
+      console.warn('FFmpeg exit error:', error);
+    }
+    resetFFmpeg();
+  };
+
+  signal.addEventListener('abort', abortHandler, { once: true });
+
+  try {
+    setStatus('FFmpeg で GIF を生成しています...');
+    const source = await fetchFile(file);
+    ffmpeg.FS('writeFile', inputName, source);
+    const filter = createFilterPipeline(sanitizedFps, sanitizedWidth, sanitizedQuality);
+    await ffmpeg.run('-i', inputName, '-vf', filter, '-loop', '0', outputName);
+    const data = ffmpeg.FS('readFile', outputName);
+    return new Blob([data], { type: 'image/gif' });
+  } catch (error) {
+    if (aborted) {
       throw new Error('処理が中断されました。');
     }
-
-    const seekTime = Math.min(t, duration - 1e-4);
-    await seekVideo(video, seekTime);
-    ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
-    const bitmap = await createImageBitmap(canvas);
-    bitmaps.push(bitmap);
+    try {
+      ffmpeg.exit();
+    } catch (exitError) {
+      console.warn('FFmpeg exit error:', exitError);
+    }
+    resetFFmpeg();
+    throw error;
+  } finally {
+    signal.removeEventListener('abort', abortHandler);
+    try {
+      ffmpeg.FS('unlink', inputName);
+    } catch (error) {
+      console.warn('Failed to remove input from FFmpeg FS', error);
+    }
+    try {
+      ffmpeg.FS('unlink', outputName);
+    } catch (error) {
+      console.warn('Failed to remove output from FFmpeg FS', error);
+    }
   }
-
-  if (bitmaps.length === 0) {
-    throw new Error('GIF に変換できるフレームが生成されませんでした。');
-  }
-
-  return { bitmaps, width: targetWidth, height: targetHeight };
-};
-
-const generateGif = async (video: HTMLVideoElement, options: ConversionOptions, signal: AbortSignal): Promise<Blob> => {
-  const sanitizedFps = Math.max(1, options.fps);
-  const { bitmaps, width, height } = await extractFramesBySeeking(video, sanitizedFps, options.width, signal);
-
-  controls.canvas.width = width;
-  controls.canvas.height = height;
-  const ctx = controls.canvas.getContext('2d');
-  if (!ctx) {
-    bitmaps.forEach((bitmap) => bitmap.close?.());
-    throw new Error('Canvas が利用できません。');
-  }
-
-  const encoder = new GIFEncoder(width, height);
-  encoder.setRepeat(0);
-  encoder.setDelay(Math.round(1000 / sanitizedFps));
-  encoder.setQuality(options.quality);
-  encoder.start();
-
-  bitmaps.forEach((bitmap, index) => {
-    ctx.drawImage(bitmap, 0, 0, width, height);
-    encoder.addFrame(ctx);
-    bitmap.close?.();
-    setStatus(`フレームを処理中... (${index + 1}/${bitmaps.length})`);
-  });
-
-  encoder.finish();
-  const binary = encoder.stream().getData();
-  const copied = new Uint8Array(binary.length);
-  copied.set(binary);
-  return new Blob([copied.buffer], { type: 'image/gif' });
-};
-
-const seekVideo = async (video: HTMLVideoElement, time: number): Promise<void> => {
-  video.currentTime = time;
-  await once(video, 'seeked').catch(() => {
-    throw new Error('動画のシークに失敗しました。');
-  });
 };
 
 const autoEncodeWithLimit = async (
+  file: File,
   video: HTMLVideoElement,
   options: ConversionOptions,
   signal: AbortSignal,
 ): Promise<{ blob: Blob; width: number; fps: number; iterations: number }> => {
+  await ensureVideoReady(video);
   let width = Math.max(160, Math.round(options.width));
   let fps = Math.max(1, Math.round(options.fps));
+  const quality = Math.max(1, Math.round(options.quality));
   let iterations = 0;
   let lastBlob: Blob | null = null;
+
   while (width >= 160 && fps >= 5) {
     iterations += 1;
     setStatus(`変換中... (試行 ${iterations})`);
-    const blob = await generateGif(video, { ...options, width, fps }, signal);
+    const blob = await generateGif(file, { width, fps, quality }, signal);
     if (blob.size <= MAX_SIZE_BYTES) {
       return { blob, width, fps, iterations };
     }
     lastBlob = blob;
     if (width > 320) {
-      width = Math.floor(width * 0.85);
+      width = Math.max(160, Math.floor(width * 0.85));
       continue;
     }
     fps = Math.max(5, fps - 2);
   }
+
   if (lastBlob) {
     return { blob: lastBlob, width, fps, iterations };
   }
+
   throw new Error('出力サイズを 10MB 以下に抑えられませんでした。設定を見直してください。');
 };
 
@@ -294,7 +341,7 @@ controls.convert.addEventListener('click', async () => {
       fps: sanitizeNumberInput(controls.fps.value, 12, 1, 60),
       quality: sanitizeNumberInput(controls.quality.value, 6, 1, 8),
     };
-    const result = await autoEncodeWithLimit(controls.video, options, abortController.signal);
+    const result = await autoEncodeWithLimit(currentFile, controls.video, options, abortController.signal);
     const url = URL.createObjectURL(result.blob);
     controls.download.href = url;
     controls.download.download = `${currentFile.name.replace(/\.[^.]+$/, '') || 'output'}.gif`;
