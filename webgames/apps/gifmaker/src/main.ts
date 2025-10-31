@@ -51,9 +51,20 @@ type FFmpegInstance = {
 
 type FetchFile = (input: File | string | ArrayBuffer | ArrayBufferView) => Promise<Uint8Array>;
 
+type FFmpegModule = {
+  createFFmpeg?: (options?: { log?: boolean; corePath?: string }) => FFmpegInstance;
+  fetchFile?: FetchFile;
+  default?: {
+    createFFmpeg?: (options?: { log?: boolean; corePath?: string }) => FFmpegInstance;
+    fetchFile?: FetchFile;
+  };
+};
+
 let ffmpegInstance: FFmpegInstance | null = null;
 let fetchFileFn: FetchFile | null = null;
 let ffmpegLoadingPromise: Promise<void> | null = null;
+
+const CORE_PATH = 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-core/0.12.10/esm/ffmpeg-core.js';
 
 const resetFFmpeg = (): void => {
   ffmpegInstance = null;
@@ -71,12 +82,14 @@ const loadFFmpeg = async (): Promise<void> => {
 
   ffmpegLoadingPromise = (async () => {
     setStatus('FFmpeg モジュールを読み込んでいます...');
-    const { createFFmpeg, fetchFile } = (await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.9/dist/esm/index.js')) as {
-      createFFmpeg: (options?: { log?: boolean }) => FFmpegInstance;
-      fetchFile: FetchFile;
-    };
+    const module = (await import(/* @vite-ignore */ 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.15/esm/index.js')) as FFmpegModule;
+    const createFFmpeg = module.createFFmpeg ?? module.default?.createFFmpeg;
+    const fetchFile = module.fetchFile ?? module.default?.fetchFile;
+    if (!createFFmpeg || !fetchFile) {
+      throw new Error('FFmpeg モジュールの読み込みに失敗しました');
+    }
     fetchFileFn = fetchFile;
-    const instance = createFFmpeg({ log: false });
+    const instance = createFFmpeg({ log: false, corePath: CORE_PATH });
     instance.setProgress?.(({ ratio }) => {
       setStatus(`FFmpeg 変換中... ${(ratio * 100).toFixed(1)}%`);
     });
@@ -174,37 +187,6 @@ const handleDrop = (event: DragEvent): void => {
   }
 };
 
-const once = <T extends keyof HTMLVideoElementEventMap>(
-  target: HTMLVideoElement,
-  type: T,
-): Promise<HTMLVideoElementEventMap[T]> => {
-  return new Promise((resolve) => {
-    const handler = (event: Event) => {
-      target.removeEventListener(type, handler);
-      resolve(event as HTMLVideoElementEventMap[T]);
-    };
-    target.addEventListener(type, handler, { once: true });
-  });
-};
-
-const ensureVideoReady = async (video: HTMLVideoElement): Promise<void> => {
-  if (video.readyState < HTMLMediaElement.HAVE_METADATA) {
-    await once(video, 'loadedmetadata');
-  }
-
-  if (video.videoWidth === 0 || video.videoHeight === 0) {
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-  }
-
-  if (video.videoWidth === 0 || video.videoHeight === 0) {
-    throw new Error('動画のメタデータを取得できませんでした。別のファイルでお試しください。');
-  }
-
-  if (!Number.isFinite(video.duration) || video.duration <= 0) {
-    throw new Error('動画の長さが不正です。');
-  }
-};
-
 
 const createFilterPipeline = (fps: number, width: number, quality: number): string => {
   const ditherModes = [
@@ -285,11 +267,9 @@ const generateGif = async (file: File, options: ConversionOptions, signal: Abort
 
 const autoEncodeWithLimit = async (
   file: File,
-  video: HTMLVideoElement,
   options: ConversionOptions,
   signal: AbortSignal,
 ): Promise<{ blob: Blob; width: number; fps: number; iterations: number }> => {
-  await ensureVideoReady(video);
   let width = Math.max(160, Math.round(options.width));
   let fps = Math.max(1, Math.round(options.fps));
   const quality = Math.max(1, Math.round(options.quality));
@@ -336,12 +316,13 @@ controls.convert.addEventListener('click', async () => {
   try {
     controls.video.pause();
     controls.video.currentTime = 0;
+    await ensureVideoReady(controls.video);
     const options: ConversionOptions = {
       width: sanitizeNumberInput(controls.width.value, controls.video.videoWidth || 480, 160, 960),
       fps: sanitizeNumberInput(controls.fps.value, 12, 1, 60),
       quality: sanitizeNumberInput(controls.quality.value, 6, 1, 8),
     };
-    const result = await autoEncodeWithLimit(currentFile, controls.video, options, abortController.signal);
+    const result = await autoEncodeWithLimit(currentFile, options, abortController.signal);
     const url = URL.createObjectURL(result.blob);
     controls.download.href = url;
     controls.download.download = `${currentFile.name.replace(/\.[^.]+$/, '') || 'output'}.gif`;
@@ -409,3 +390,33 @@ const sanitizeNumberInput = (raw: string, fallback: number, min = 0, max = Numbe
 };
 
 resetPreview();
+const once = <T extends keyof HTMLVideoElementEventMap>(
+  target: HTMLVideoElement,
+  type: T,
+): Promise<HTMLVideoElementEventMap[T]> => {
+  return new Promise((resolve) => {
+    const handler = (event: Event) => {
+      target.removeEventListener(type, handler);
+      resolve(event as HTMLVideoElementEventMap[T]);
+    };
+    target.addEventListener(type, handler, { once: true });
+  });
+};
+
+const ensureVideoReady = async (video: HTMLVideoElement): Promise<void> => {
+  if (video.readyState < HTMLMediaElement.HAVE_METADATA) {
+    await once(video, 'loadedmetadata');
+  }
+
+  if (video.videoWidth === 0 || video.videoHeight === 0) {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
+
+  if (video.videoWidth === 0 || video.videoHeight === 0) {
+    throw new Error('動画のメタデータを取得できませんでした。別のファイルでお試しください。');
+  }
+
+  if (!Number.isFinite(video.duration) || video.duration <= 0) {
+    throw new Error('動画の長さが不正です。');
+  }
+};
