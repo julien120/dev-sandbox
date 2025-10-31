@@ -1,6 +1,11 @@
+import type { FFmpeg, ProgressEvent as FFmpegProgressEvent } from '@ffmpeg/ffmpeg';
 import './style.css';
 
 const MAX_SIZE_BYTES = 10 * 1024 * 1024;
+const CORE_ASSET_BASE_PATH = `${import.meta.env.BASE_URL}ffmpeg/`;
+const CORE_JS_URL = `${CORE_ASSET_BASE_PATH}ffmpeg-core.js`;
+const CORE_WASM_URL = `${CORE_ASSET_BASE_PATH}ffmpeg-core.wasm`;
+const CORE_WORKER_URL = `${CORE_ASSET_BASE_PATH}ffmpeg-core.worker.js`;
 
 type Controls = {
   width: HTMLInputElement;
@@ -40,37 +45,25 @@ const fileInput = document.getElementById('file-input') as HTMLInputElement;
 let currentFile: File | null = null;
 let objectUrl: string | null = null;
 
-type FFmpegInstance = {
-  isLoaded: () => boolean;
-  load: () => Promise<void>;
-  run: (...args: string[]) => Promise<void>;
-  FS: (type: string, ...args: unknown[]) => unknown;
-  exit: () => void;
-  setProgress?: (cb: (progress: { ratio: number }) => void) => void;
-};
-
-type FetchFile = (input: File | string | ArrayBuffer | ArrayBufferView) => Promise<Uint8Array>;
-
-type FFmpegModule = {
-  createFFmpeg?: (options?: { log?: boolean; corePath?: string }) => FFmpegInstance;
-  fetchFile?: FetchFile;
-  default?: {
-    createFFmpeg?: (options?: { log?: boolean; corePath?: string }) => FFmpegInstance;
-    fetchFile?: FetchFile;
-  };
-};
-
-let ffmpegInstance: FFmpegInstance | null = null;
-let fetchFileFn: FetchFile | null = null;
+let ffmpegInstance: FFmpeg | null = null;
 let ffmpegLoadingPromise: Promise<void> | null = null;
-const FFmpeg_SOURCES = [
-  { module: 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js', core: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js' },
-  { module: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js', core: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js' },
-];
+const handleFFmpegProgress = ({ progress }: FFmpegProgressEvent): void => {
+  const ratio = Number.isFinite(progress) ? progress : 0;
+  setStatus(`FFmpeg 変換中... ${(ratio * 100).toFixed(1)}%`);
+};
 
 const resetFFmpeg = (): void => {
-  ffmpegInstance = null;
-  fetchFileFn = null;
+  if (!ffmpegInstance) {
+    return;
+  }
+  try {
+    ffmpegInstance.off('progress', handleFFmpegProgress);
+    ffmpegInstance.terminate();
+  } catch (error) {
+    console.warn('FFmpeg terminate error:', error);
+  } finally {
+    ffmpegInstance = null;
+  }
 };
 
 const loadFFmpeg = async (): Promise<void> => {
@@ -83,40 +76,32 @@ const loadFFmpeg = async (): Promise<void> => {
   }
 
   ffmpegLoadingPromise = (async () => {
-    let lastError: unknown = null;
-    for (const source of FFmpeg_SOURCES) {
-      try {
-        setStatus(`FFmpeg モジュールを読み込んでいます...`);
-        const module = (await import(/* @vite-ignore */ source.module)) as FFmpegModule;
-        const createFFmpeg = module.createFFmpeg ?? module.default?.createFFmpeg;
-        const fetchFile = module.fetchFile ?? module.default?.fetchFile;
-        if (typeof createFFmpeg !== 'function' || typeof fetchFile !== 'function') {
-          console.warn('FFmpeg module shape:', module);
-          throw new Error('createFFmpeg / fetchFile が見つかりません');
-        }
-        fetchFileFn = fetchFile;
-        const instance = createFFmpeg({ log: false, corePath: source.core });
-        instance.setProgress?.(({ ratio }) => {
-          setStatus(`FFmpeg 変換中... ${(ratio * 100).toFixed(1)}%`);
-        });
-        await instance.load();
-        ffmpegInstance = instance;
-        return;
-      } catch (error) {
-        console.warn('FFmpeg load failed for', source.module, error);
-        lastError = error;
-        resetFFmpeg();
-      }
+    setStatus(`FFmpeg モジュールを読み込んでいます...`);
+    const { FFmpeg: FFmpegConstructor } = (await import('@ffmpeg/ffmpeg')) as {
+      FFmpeg: new () => FFmpeg;
+    };
+    if (typeof FFmpegConstructor !== 'function') {
+      throw new Error('FFmpeg クラスが見つかりませんでした。');
     }
-    throw lastError ?? new Error('FFmpeg モジュールの読み込みに失敗しました');
+    const instance = new FFmpegConstructor();
+    instance.on('progress', handleFFmpegProgress);
+    await instance.load({
+      coreURL: CORE_JS_URL,
+      wasmURL: CORE_WASM_URL,
+      workerURL: CORE_WORKER_URL,
+    });
+    ffmpegInstance = instance;
   })();
 
   try {
     await ffmpegLoadingPromise;
+  } catch (error) {
+    resetFFmpeg();
+    throw error;
   } finally {
     ffmpegLoadingPromise = null;
   }
-};;;
+};
 
 const updateRangeLabels = (): void => {
   widthValue.textContent = `${controls.width.value}px`;
@@ -129,6 +114,26 @@ updateRangeLabels();
 const setStatus = (text: string, isError = false): void => {
   controls.status.textContent = text;
   controls.status.dataset.state = isError ? 'error' : 'normal';
+};
+
+const toUint8Array = async (input: File | string | ArrayBuffer | ArrayBufferView): Promise<Uint8Array> => {
+  if (input instanceof Uint8Array) {
+    return input;
+  }
+  if (typeof input === 'string') {
+    return new TextEncoder().encode(input);
+  }
+  if (input instanceof Blob) {
+    const buffer = await input.arrayBuffer();
+    return new Uint8Array(buffer);
+  }
+  if (input instanceof ArrayBuffer) {
+    return new Uint8Array(input);
+  }
+  if (ArrayBuffer.isView(input)) {
+    return new Uint8Array(input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength));
+  }
+  throw new Error('入力データを Uint8Array に変換できませんでした。');
 };
 
 const resetPreview = (): void => {
@@ -221,8 +226,7 @@ const createFilterPipeline = (fps: number, width: number, quality: number): stri
 const generateGif = async (file: File, options: ConversionOptions, signal: AbortSignal): Promise<Blob> => {
   await loadFFmpeg();
   const ffmpeg = ffmpegInstance;
-  const fetchFile = fetchFileFn;
-  if (!ffmpeg || !fetchFile) {
+  if (!ffmpeg) {
     throw new Error('FFmpeg の初期化に失敗しました。');
   }
 
@@ -235,11 +239,6 @@ const generateGif = async (file: File, options: ConversionOptions, signal: Abort
   let aborted = false;
   const abortHandler = (): void => {
     aborted = true;
-    try {
-      ffmpeg.exit();
-    } catch (error) {
-      console.warn('FFmpeg exit error:', error);
-    }
     resetFFmpeg();
   };
 
@@ -247,34 +246,38 @@ const generateGif = async (file: File, options: ConversionOptions, signal: Abort
 
   try {
     setStatus('FFmpeg で GIF を生成しています...');
-    const source = await fetchFile(file);
-    ffmpeg.FS('writeFile', inputName, source);
+    const source = await toUint8Array(file);
+    await ffmpeg.writeFile(inputName, source);
     const filter = createFilterPipeline(sanitizedFps, sanitizedWidth, sanitizedQuality);
-    await ffmpeg.run('-i', inputName, '-vf', filter, '-loop', '0', outputName);
-    const data = ffmpeg.FS('readFile', outputName);
-    return new Blob([data], { type: 'image/gif' });
+    const exitCode = await ffmpeg.exec(['-i', inputName, '-vf', filter, '-loop', '0', outputName]);
+    if (exitCode !== 0) {
+      throw new Error(`FFmpeg の実行に失敗しました (コード: ${exitCode})。`);
+    }
+    const data = await ffmpeg.readFile(outputName);
+    const binary =
+      data instanceof Uint8Array
+        ? data
+        : new TextEncoder().encode(typeof data === 'string' ? data : String(data));
+    return new Blob([binary], { type: 'image/gif' });
   } catch (error) {
     if (aborted) {
       throw new Error('処理が中断されました。');
-    }
-    try {
-      ffmpeg.exit();
-    } catch (exitError) {
-      console.warn('FFmpeg exit error:', exitError);
     }
     resetFFmpeg();
     throw error;
   } finally {
     signal.removeEventListener('abort', abortHandler);
-    try {
-      ffmpeg.FS('unlink', inputName);
-    } catch (error) {
-      console.warn('Failed to remove input from FFmpeg FS', error);
-    }
-    try {
-      ffmpeg.FS('unlink', outputName);
-    } catch (error) {
-      console.warn('Failed to remove output from FFmpeg FS', error);
+    if (ffmpeg.loaded) {
+      try {
+        await ffmpeg.deleteFile(inputName);
+      } catch (error) {
+        console.warn('Failed to remove input from FFmpeg FS', error);
+      }
+      try {
+        await ffmpeg.deleteFile(outputName);
+      } catch (error) {
+        console.warn('Failed to remove output from FFmpeg FS', error);
+      }
     }
   }
 };
@@ -380,7 +383,7 @@ controls.quality.addEventListener('input', updateRangeLabels);
 
 controls.download.addEventListener('click', () => {
   if (controls.download.getAttribute('aria-disabled') === 'true') {
-      return;
+    return;
   }
   setStatus('GIF をダウンロードしています...');
 });
