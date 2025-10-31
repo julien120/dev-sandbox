@@ -2,6 +2,7 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 import './style.css';
 
 const MAX_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_FFMPEG_LOGS = 500;
 const CORE_ASSET_BASE_PATH = `${import.meta.env.BASE_URL}ffmpeg/`;
 const CORE_JS_URL = `${CORE_ASSET_BASE_PATH}ffmpeg-core.js`;
 const CORE_WASM_URL = `${CORE_ASSET_BASE_PATH}ffmpeg-core.wasm`;
@@ -56,18 +57,83 @@ type FFmpegLogEvent = {
   message: string;
 };
 
+type FFmpegExecError = Error & {
+  ffmpegLabel?: string;
+  ffmpegArgs?: string[];
+};
+
 const ffmpegLogs: FFmpegLogEvent[] = [];
+const pushFfmpegLog = (entry: FFmpegLogEvent): void => {
+  ffmpegLogs.push({ type: entry.type, message: String(entry.message ?? '') });
+  if (ffmpegLogs.length > MAX_FFMPEG_LOGS) {
+    ffmpegLogs.splice(0, ffmpegLogs.length - MAX_FFMPEG_LOGS);
+  }
+};
+
+const deriveFriendlyLogMessage = (logs: FFmpegLogEvent[]): string | null => {
+  for (let index = logs.length - 1; index >= 0; index -= 1) {
+    const entry = logs[index];
+    if (entry.type !== 'stderr') {
+      continue;
+    }
+    const content = entry.message?.trim();
+    if (!content) {
+      continue;
+    }
+    const normalized = content.toLowerCase();
+    if (normalized.includes('error while opening input')) {
+      return '動画の読み込みに失敗しました。対応していないコーデックまたはファイル破損の可能性があります。';
+    }
+    if (normalized.includes('no such filter')) {
+      return '必要なフィルタが利用できません。ブラウザを更新するかアプリを再読み込みして再試行してください。';
+    }
+    if (normalized.includes('cannot find a matching stream')) {
+      return '映像トラックが見つかりませんでした。別の動画ファイルでお試しください。';
+    }
+    if (normalized.includes('invalid argument')) {
+      return 'FFmpeg のフィルタ指定に無効な値が含まれています。設定値を変更して再試行してください。';
+    }
+    if (normalized.includes("option 'diffusion' not found")) {
+      return '使用中の FFmpeg では指定したディザ設定が利用できません。再変換を実行しました。';
+    }
+    if (normalized.includes('decoding for stream')) {
+      return '動画のデコードに失敗しました。形式を変換してから再度お試しください。';
+    }
+    return `詳細: ${content}`;
+  }
+  return null;
+};
+
+let progressTickerId: number | null = null;
+let progressDots = 0;
+
+const startProgressTicker = (): void => {
+  if (progressTickerId !== null) {
+    return;
+  }
+  progressDots = 0;
+  progressTickerId = window.setInterval(() => {
+    progressDots = (progressDots + 1) % 4;
+    const suffix = '.'.repeat(progressDots).padEnd(3, ' ');
+    setStatus(`FFmpeg 変換中${suffix}`);
+  }, 400);
+};
+
+const stopProgressTicker = (): void => {
+  if (progressTickerId !== null) {
+    window.clearInterval(progressTickerId);
+    progressTickerId = null;
+  }
+};
 
 const handleFFmpegProgress = ({ progress }: FFmpegProgressEvent): void => {
   const ratio = Number.isFinite(progress) ? progress : 0;
-  setStatus(`FFmpeg 変換中... ${(ratio * 100).toFixed(1)}%`);
+  stopProgressTicker();
+  setStatus(`FFmpeg 変換中 ${(ratio * 100).toFixed(1)}%`);
 };
 
 const handleFFmpegLog = (event: FFmpegLogEvent): void => {
-  ffmpegLogs.push(event);
-  if (ffmpegLogs.length > 200) {
-    ffmpegLogs.shift();
-  }
+  pushFfmpegLog(event);
 };
 
 const resetFFmpeg = (): void => {
@@ -99,6 +165,11 @@ const loadFFmpeg = async (): Promise<void> => {
     const instance = new FFmpeg();
     instance.on('progress', handleFFmpegProgress);
     instance.on('log', handleFFmpegLog);
+    (instance as unknown as { setLogger?: (callback: (payload: FFmpegLogEvent) => void) => void }).setLogger?.(
+      ({ type, message }: FFmpegLogEvent) => {
+        pushFfmpegLog({ type, message });
+      },
+    );
     console.info('[gifmaker] loading ffmpeg', {
       coreURL: CORE_JS_URL,
       wasmURL: CORE_WASM_URL,
@@ -233,14 +304,22 @@ const createFilterPipeline = (fps: number, width: number, quality: number): stri
     'floyd_steinberg',
     'sierra2',
     'sierra2_4a',
-    'bayer:bayer_scale=5:diffusion=1',
-    'bayer:bayer_scale=4:diffusion=1',
-    'bayer:bayer_scale=3:diffusion=1',
-    'bayer:bayer_scale=2:diffusion=1',
+    'bayer:bayer_scale=5',
+    'bayer:bayer_scale=4',
+    'bayer:bayer_scale=3',
+    'bayer:bayer_scale=2',
   ];
-  const index = Math.min(ditherModes.length - 1, Math.max(0, Math.round(quality) - 1));
-  const dither = ditherModes[index];
-  return `fps=${fps},scale=${width}:-2:flags=lanczos,split[a][b];[a]palettegen=stats_mode=full[p];[b][p]paletteuse=dither=${dither}`;
+  const idx = Math.min(ditherModes.length - 1, Math.max(0, Math.round(quality) - 1));
+  const dither = ditherModes[idx];
+
+  return [
+    `scale=${width}:-1:flags=lanczos`,
+    `fps=${fps}`,
+    'format=rgba',
+    'split[s0][s1]',
+    '[s0]palettegen=stats_mode=full:reserve_transparent=0[p]',
+    `[s1][p]paletteuse=new=1:dither=${dither}`,
+  ].join(',');
 };
 
 const generateGif = async (file: File, options: ConversionOptions, signal: AbortSignal): Promise<Blob> => {
@@ -267,18 +346,77 @@ const generateGif = async (file: File, options: ConversionOptions, signal: Abort
   signal.addEventListener('abort', abortHandler, { once: true });
 
   try {
-    setStatus('FFmpeg で GIF を生成しています...');
+    startProgressTicker();
+    setStatus('FFmpeg 変換中   ');
     ffmpegLogs.length = 0;
     const source = await toUint8Array(file);
     console.info('[gifmaker] writeFile', { inputName, byteLength: source.byteLength });
     await ffmpeg.writeFile(inputName, source);
+
+    const runFfmpeg = async (label: string, args: string[]): Promise<void> => {
+      console.log('[gifmaker] exec', { label, args });
+      const logStart = ffmpegLogs.length;
+      const exitCode = await ffmpeg.exec(args);
+      if (exitCode !== 0) {
+        const recentLogs = ffmpegLogs.slice(logStart);
+        console.warn(`[gifmaker] ${label} logs`, recentLogs.length, recentLogs);
+        const error: FFmpegExecError = new Error(`FFmpeg の実行に失敗しました (コード: ${exitCode})。`);
+        error.ffmpegLabel = label;
+        error.ffmpegArgs = args;
+        throw error;
+      }
+    };
+
     const filter = createFilterPipeline(sanitizedFps, sanitizedWidth, sanitizedQuality);
-    const args = ['-i', inputName, '-vf', filter, '-loop', '0', outputName];
-    console.info('[gifmaker] exec', { args });
-    const exitCode = await ffmpeg.exec(args);
-    if (exitCode !== 0) {
-      throw new Error(`FFmpeg の実行に失敗しました (コード: ${exitCode})。`);
+    console.info('[gifmaker] filter', filter);
+    const simpleFilter = `scale=${sanitizedWidth}:-1:flags=lanczos,fps=${sanitizedFps}`;
+    const timestamp = Date.now();
+    const probeOutputName = `probe-${timestamp}.gif`;
+    const intermediateName = `tmp-${timestamp}.mp4`;
+
+    const paletteArgs = ['-i', inputName, '-vf', filter, '-loop', '0', outputName];
+    const simpleArgs = ['-i', inputName, '-vf', simpleFilter, '-loop', '0', outputName];
+    const probeArgs = ['-i', inputName, '-t', '2', '-vf', simpleFilter, '-loop', '0', probeOutputName];
+    const transcodeArgs = [
+      '-i', inputName,
+      '-vf', `${simpleFilter},format=yuv420p`,
+      '-an',
+      '-c:v', 'mpeg4',
+      intermediateName,
+    ];
+    const paletteFromIntermediateArgs = ['-i', intermediateName, '-vf', filter, '-loop', '0', outputName];
+
+    const cleanupTemp = async (path: string): Promise<void> => {
+      try {
+        await ffmpeg.deleteFile(path);
+      } catch {
+        // ignore
+      }
+    };
+
+    try {
+      await runFfmpeg('palette', paletteArgs);
+    } catch (paletteError) {
+      console.warn('[gifmaker] palette pipeline failed, trying simple pipeline', paletteError);
+      try {
+        await runFfmpeg('simple-probe', probeArgs);
+        await cleanupTemp(probeOutputName);
+        await runFfmpeg('simple', simpleArgs);
+      } catch (simpleError) {
+        await cleanupTemp(probeOutputName);
+        console.warn('[gifmaker] simple pipeline failed, trying transcode fallback', simpleError);
+        try {
+          await runFfmpeg('transcode', transcodeArgs);
+          await runFfmpeg('palette-from-transcode', paletteFromIntermediateArgs);
+        } catch (transcodeError) {
+          console.warn('[gifmaker] transcode fallback failed', transcodeError);
+          throw transcodeError;
+        } finally {
+          await cleanupTemp(intermediateName);
+        }
+      }
     }
+
     const data = await ffmpeg.readFile(outputName);
     const binaryArray =
       data instanceof Uint8Array
@@ -293,12 +431,11 @@ const generateGif = async (file: File, options: ConversionOptions, signal: Abort
       throw new Error('処理が中断されました。');
     }
     console.error('[gifmaker] ffmpeg error', error);
-    if (ffmpegLogs.length > 0) {
-      console.error('[gifmaker] ffmpeg logs', ffmpegLogs);
-    }
+    console.warn('[gifmaker] ffmpeg logs', ffmpegLogs.length, ffmpegLogs);
     resetFFmpeg();
     throw error;
   } finally {
+    stopProgressTicker();
     signal.removeEventListener('abort', abortHandler);
     if (ffmpeg.loaded) {
       try {
@@ -431,12 +568,9 @@ controls.convert.addEventListener('click', async () => {
   } catch (error) {
     console.error(error);
     let message = error instanceof Error ? error.message : '変換中にエラーが発生しました。';
-    for (let index = ffmpegLogs.length - 1; index >= 0; index -= 1) {
-      const entry = ffmpegLogs[index];
-      if (entry.type === 'stderr' && entry.message.trim()) {
-        message = `${message} 詳細: ${entry.message.trim()}`;
-        break;
-      }
+    const hint = deriveFriendlyLogMessage(ffmpegLogs);
+    if (hint) {
+      message = `${message} ${hint}`;
     }
     setStatus(message, true);
   } finally {
