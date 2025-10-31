@@ -1,4 +1,4 @@
-import type { FFmpeg, ProgressEvent as FFmpegProgressEvent } from '@ffmpeg/ffmpeg';
+import type { FFmpeg } from '@ffmpeg/ffmpeg';
 import './style.css';
 
 const MAX_SIZE_BYTES = 10 * 1024 * 1024;
@@ -47,6 +47,11 @@ let objectUrl: string | null = null;
 
 let ffmpegInstance: FFmpeg | null = null;
 let ffmpegLoadingPromise: Promise<void> | null = null;
+type FFmpegProgressEvent = {
+  progress: number;
+  time: number;
+};
+
 const handleFFmpegProgress = ({ progress }: FFmpegProgressEvent): void => {
   const ratio = Number.isFinite(progress) ? progress : 0;
   setStatus(`FFmpeg 変換中... ${(ratio * 100).toFixed(1)}%`);
@@ -254,11 +259,13 @@ const generateGif = async (file: File, options: ConversionOptions, signal: Abort
       throw new Error(`FFmpeg の実行に失敗しました (コード: ${exitCode})。`);
     }
     const data = await ffmpeg.readFile(outputName);
-    const binary =
+    const binaryArray =
       data instanceof Uint8Array
         ? data
         : new TextEncoder().encode(typeof data === 'string' ? data : String(data));
-    return new Blob([binary], { type: 'image/gif' });
+    const normalizedArray = new Uint8Array(binaryArray.byteLength);
+    normalizedArray.set(binaryArray);
+    return new Blob([normalizedArray.buffer], { type: 'image/gif' });
   } catch (error) {
     if (aborted) {
       throw new Error('処理が中断されました。');

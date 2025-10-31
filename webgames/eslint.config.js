@@ -19,7 +19,7 @@ if (typeof globalThis.AbortSignal !== 'undefined' && !globalThis.AbortSignal.pro
 
 export default [
   {
-    ignores: ['dist/**', 'apps/*/dist/**', 'site/dist/**', 'node_modules/**'],
+    ignores: ['dist/**', 'apps/*/dist/**', 'apps/*/public/**', 'site/dist/**', 'node_modules/**'],
   },
   {
     languageOptions: {
