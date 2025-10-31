@@ -161,8 +161,7 @@ const extractFramesBySeeking = async (
   fps: number,
   outWidth: number,
   signal: AbortSignal,
-): Promise<{ bitmaps: ImageBitmap[]; width: number; height: number }>
-=> {
+): Promise<{ bitmaps: ImageBitmap[]; width: number; height: number }> => {
   await ensureVideoReady(video);
 
   const sanitizedFps = Math.max(1, fps);
