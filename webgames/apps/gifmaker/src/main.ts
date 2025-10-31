@@ -51,10 +51,23 @@ type FFmpegProgressEvent = {
   progress: number;
   time: number;
 };
+type FFmpegLogEvent = {
+  type: string;
+  message: string;
+};
+
+const ffmpegLogs: FFmpegLogEvent[] = [];
 
 const handleFFmpegProgress = ({ progress }: FFmpegProgressEvent): void => {
   const ratio = Number.isFinite(progress) ? progress : 0;
   setStatus(`FFmpeg 変換中... ${(ratio * 100).toFixed(1)}%`);
+};
+
+const handleFFmpegLog = (event: FFmpegLogEvent): void => {
+  ffmpegLogs.push(event);
+  if (ffmpegLogs.length > 200) {
+    ffmpegLogs.shift();
+  }
 };
 
 const resetFFmpeg = (): void => {
@@ -63,6 +76,7 @@ const resetFFmpeg = (): void => {
   }
   try {
     ffmpegInstance.off('progress', handleFFmpegProgress);
+    ffmpegInstance.off('log', handleFFmpegLog);
     ffmpegInstance.terminate();
   } catch (error) {
     console.warn('FFmpeg terminate error:', error);
@@ -84,16 +98,17 @@ const loadFFmpeg = async (): Promise<void> => {
     setStatus('FFmpeg モジュールを読み込んでいます...');
     const instance = new FFmpeg();
     instance.on('progress', handleFFmpegProgress);
+    instance.on('log', handleFFmpegLog);
     console.info('[gifmaker] loading ffmpeg', {
       coreURL: CORE_JS_URL,
       wasmURL: CORE_WASM_URL,
-      workerURL: CORE_WORKER_URL,
     });
-    await instance.load({
+    const loadConfig: Parameters<FFmpeg['load']>[0] = {
       coreURL: CORE_JS_URL,
       wasmURL: CORE_WASM_URL,
-      workerURL: CORE_WORKER_URL,
-    });
+    };
+    loadConfig.workerURL = CORE_WORKER_URL;
+    await instance.load(loadConfig);
     console.info('[gifmaker] ffmpeg loaded');
     ffmpegInstance = instance;
   })();
@@ -225,7 +240,7 @@ const createFilterPipeline = (fps: number, width: number, quality: number): stri
   ];
   const index = Math.min(ditherModes.length - 1, Math.max(0, Math.round(quality) - 1));
   const dither = ditherModes[index];
-  return `fps=${fps},scale=${width}:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=full[p];[b][p]paletteuse=dither=${dither}`;
+  return `fps=${fps},scale=${width}:-2:flags=lanczos,split[a][b];[a]palettegen=stats_mode=full[p];[b][p]paletteuse=dither=${dither}`;
 };
 
 const generateGif = async (file: File, options: ConversionOptions, signal: AbortSignal): Promise<Blob> => {
@@ -235,7 +250,9 @@ const generateGif = async (file: File, options: ConversionOptions, signal: Abort
     throw new Error('FFmpeg の初期化に失敗しました。');
   }
 
-  const sanitizedWidth = Math.max(160, Math.round(options.width));
+  const minWidth = 160;
+  const rawWidth = Math.max(minWidth, Math.round(options.width));
+  const sanitizedWidth = rawWidth % 2 === 0 ? rawWidth : rawWidth + 1;
   const sanitizedFps = Math.max(1, Math.round(options.fps));
   const sanitizedQuality = Math.max(1, Math.round(options.quality));
   const inputName = `input-${Date.now()}.mp4`;
@@ -251,6 +268,7 @@ const generateGif = async (file: File, options: ConversionOptions, signal: Abort
 
   try {
     setStatus('FFmpeg で GIF を生成しています...');
+    ffmpegLogs.length = 0;
     const source = await toUint8Array(file);
     console.info('[gifmaker] writeFile', { inputName, byteLength: source.byteLength });
     await ffmpeg.writeFile(inputName, source);
@@ -275,6 +293,9 @@ const generateGif = async (file: File, options: ConversionOptions, signal: Abort
       throw new Error('処理が中断されました。');
     }
     console.error('[gifmaker] ffmpeg error', error);
+    if (ffmpegLogs.length > 0) {
+      console.error('[gifmaker] ffmpeg logs', ffmpegLogs);
+    }
     resetFFmpeg();
     throw error;
   } finally {
@@ -304,24 +325,68 @@ const autoEncodeWithLimit = async (
   const quality = Math.max(1, Math.round(options.quality));
   let iterations = 0;
   let lastBlob: Blob | null = null;
+  let lastError: unknown = null;
+
+  const shrinkWidth = () => {
+    if (width > 320) {
+      width = Math.max(160, Math.floor(width * 0.85));
+      return true;
+    }
+    return false;
+  };
+
+  const shrinkFps = () => {
+    if (fps > 5) {
+      fps = Math.max(5, fps - 2);
+      return true;
+    }
+    return false;
+  };
 
   while (width >= 160 && fps >= 5) {
     iterations += 1;
     setStatus(`変換中... (試行 ${iterations})`);
-    const blob = await generateGif(file, { width, fps, quality }, signal);
+
+    let blob: Blob;
+    try {
+      blob = await generateGif(file, { width, fps, quality }, signal);
+    } catch (error) {
+      lastError = error;
+      if (signal.aborted) {
+        throw error;
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      const shouldRetry = message.includes('FFmpeg の実行に失敗しました') || message.includes('Aborted');
+      const reduced = shouldRetry && (shrinkWidth() || shrinkFps());
+      if (reduced) {
+        console.warn('[gifmaker] retrying with reduced settings', { width, fps });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        continue;
+      }
+      throw error;
+    }
+
     if (blob.size <= MAX_SIZE_BYTES) {
       return { blob, width, fps, iterations };
     }
+
     lastBlob = blob;
-    if (width > 320) {
-      width = Math.max(160, Math.floor(width * 0.85));
+    if (shrinkWidth()) {
       continue;
     }
-    fps = Math.max(5, fps - 2);
+    if (shrinkFps()) {
+      continue;
+    }
+    break;
   }
 
   if (lastBlob) {
     return { blob: lastBlob, width, fps, iterations };
+  }
+
+  if (lastError) {
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
 
   throw new Error('出力サイズを 10MB 以下に抑えられませんでした。設定を見直してください。');
@@ -365,7 +430,15 @@ controls.convert.addEventListener('click', async () => {
     );
   } catch (error) {
     console.error(error);
-    setStatus(error instanceof Error ? error.message : '変換中にエラーが発生しました。', true);
+    let message = error instanceof Error ? error.message : '変換中にエラーが発生しました。';
+    for (let index = ffmpegLogs.length - 1; index >= 0; index -= 1) {
+      const entry = ffmpegLogs[index];
+      if (entry.type === 'stderr' && entry.message.trim()) {
+        message = `${message} 詳細: ${entry.message.trim()}`;
+        break;
+      }
+    }
+    setStatus(message, true);
   } finally {
     if (abortController === currentController) {
       abortController = null;
