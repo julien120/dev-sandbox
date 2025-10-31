@@ -155,48 +155,79 @@ const ensureVideoReady = async (video: HTMLVideoElement): Promise<void> => {
   }
 };
 
-const generateGif = async (video: HTMLVideoElement, options: ConversionOptions, signal: AbortSignal): Promise<Blob> => {
+
+const extractFramesBySeeking = async (
+  video: HTMLVideoElement,
+  fps: number,
+  outWidth: number,
+  signal: AbortSignal,
+): Promise<{ bitmaps: ImageBitmap[]; width: number; height: number }>
+=> {
   await ensureVideoReady(video);
 
-  const targetWidth = Math.max(1, Math.round(options.width));
-  const aspect = video.videoHeight / video.videoWidth;
-  const targetHeight = Math.max(1, Math.round(targetWidth * aspect));
-  controls.canvas.width = targetWidth;
-  controls.canvas.height = targetHeight;
-  const ctx = controls.canvas.getContext('2d');
+  const sanitizedFps = Math.max(1, fps);
+  const duration = video.duration;
+  if (!Number.isFinite(duration) || duration <= 0) {
+    throw new Error('動画の長さが不正です。');
+  }
+
+  const canvas = document.createElement('canvas');
+  const scale = Math.max(1, outWidth) / video.videoWidth;
+  const targetWidth = Math.max(1, Math.round(video.videoWidth * scale));
+  const targetHeight = Math.max(1, Math.round(video.videoHeight * scale));
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) {
     throw new Error('Canvas が利用できません。');
   }
 
-  const encoder = new GIFEncoder(targetWidth, targetHeight);
+  const bitmaps: ImageBitmap[] = [];
+  const step = 1 / sanitizedFps;
+  for (let t = 0; t < duration; t += step) {
+    if (signal.aborted) {
+      bitmaps.forEach((bitmap) => bitmap.close?.());
+      throw new Error('処理が中断されました。');
+    }
+
+    const seekTime = Math.min(t, duration - 1e-4);
+    await seekVideo(video, seekTime);
+    ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+    const bitmap = await createImageBitmap(canvas);
+    bitmaps.push(bitmap);
+  }
+
+  if (bitmaps.length === 0) {
+    throw new Error('GIF に変換できるフレームが生成されませんでした。');
+  }
+
+  return { bitmaps, width: targetWidth, height: targetHeight };
+};
+
+const generateGif = async (video: HTMLVideoElement, options: ConversionOptions, signal: AbortSignal): Promise<Blob> => {
+  const sanitizedFps = Math.max(1, options.fps);
+  const { bitmaps, width, height } = await extractFramesBySeeking(video, sanitizedFps, options.width, signal);
+
+  controls.canvas.width = width;
+  controls.canvas.height = height;
+  const ctx = controls.canvas.getContext('2d');
+  if (!ctx) {
+    bitmaps.forEach((bitmap) => bitmap.close?.());
+    throw new Error('Canvas が利用できません。');
+  }
+
+  const encoder = new GIFEncoder(width, height);
   encoder.setRepeat(0);
-  encoder.setDelay(Math.round(1000 / Math.max(1, options.fps)));
+  encoder.setDelay(Math.round(1000 / sanitizedFps));
   encoder.setQuality(options.quality);
   encoder.start();
 
-  const duration = video.duration;
-  const sanitizedFps = Math.max(1, options.fps);
-  const totalFrames = Math.max(1, Math.floor(duration * sanitizedFps));
-  const displayDelay = Math.round(1000 / sanitizedFps);
-  encoder.setDelay(displayDelay);
-
-  let processedFrames = 0;
-  for (let frame = 0; frame < totalFrames; frame += 1) {
-    if (signal.aborted) {
-      throw new Error('処理が中断されました。');
-    }
-    const currentTime = Math.min(duration, frame / sanitizedFps);
-    await seekVideo(video, currentTime);
-    ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+  bitmaps.forEach((bitmap, index) => {
+    ctx.drawImage(bitmap, 0, 0, width, height);
     encoder.addFrame(ctx);
-    setStatus(`フレームを処理中... (${frame + 1}/${totalFrames})`);
-    await waitNextFrame();
-    processedFrames += 1;
-  }
-
-  if (processedFrames === 0) {
-    throw new Error('GIF に変換できるフレームが生成されませんでした。');
-  }
+    bitmap.close?.();
+    setStatus(`フレームを処理中... (${index + 1}/${bitmaps.length})`);
+  });
 
   encoder.finish();
   const binary = encoder.stream().getData();
@@ -209,12 +240,6 @@ const seekVideo = async (video: HTMLVideoElement, time: number): Promise<void> =
   video.currentTime = time;
   await once(video, 'seeked').catch(() => {
     throw new Error('動画のシークに失敗しました。');
-  });
-};
-
-const waitNextFrame = (): Promise<void> => {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => resolve());
   });
 };
 
