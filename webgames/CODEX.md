@@ -18,7 +18,7 @@ node: 20
 - GitHub Pages の公開URLは `https://julien120.github.io/dev-sandbox/`。Actions/Pages のワークフローは必ずリポジトリ直下 `.github/workflows` に置き、Vite の `base` と `build.outDir` を `/dev-sandbox/…` に揃えること。
 - 画像/音源は暫定アセットで OK。必ず差し替え前提の抽象化を行う（`assets/`参照）。
 - 新しいゲームを追加するときは、このドキュメントの該当セクションのみを更新し、ほかのゲームの記述を崩さないこと。
-- 新しいゲームを追加したら、`.github/workflows/deploy.yml` で該当アプリの `npm --workspace apps/<name> run build` と `_site/games/<name>` へのコピー処理を忘れずに追加すること。
+- 新しいゲーム/ツールを追加したら、`.github/workflows/deploy.yml` で該当アプリの `npm --workspace apps/<name> run build` と `_site/games/<name>` / `_site/tools/<name>` へのコピー処理を忘れずに追加すること。
 - バグ修正の時は何が問題だったか分析結果を記述してから実装に移ること
 
 ## 出力物（PR に必須）
@@ -43,6 +43,8 @@ node: 20
 - flappy: フラッピーバードライク。タップ/スペースで上昇、パイプ通過でスコア加算。画像差し替え前提のアセット構造。
 - emotion: カメラ映像と FaceDetector で表情を推定し、指定された感情を判定する。
 - gifmaker: 動画ファイルから GIF を生成するツール。Drag & Drop、10MB以下へのサイズ調整。
+- ramen: Three.js でラーメンをモデリングし、ドラッグで360°回転させるビジュアルツール。
+- vj: Tone.js と Three.js を組み合わせ、クリックで音楽を生成し、マウス操作で音色とVJ演出が変化するツール。
 
 ## 着手テンプレ（例）
 
