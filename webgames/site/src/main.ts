@@ -5,6 +5,7 @@ import emotionThumbnail from '../../assets/emotion-placeholder.svg?url';
 import suikaThumbnail from '../../assets/suika-placeholder.svg?url';
 import tetrisThumbnail from '../../assets/tetris-placeholder.svg?url';
 import gifmakerThumbnail from '../../assets/gifmaker-placeholder.svg?url';
+import ramenThumbnail from '../../assets/gifmaker-placeholder.svg?url';
 
 type GameSummary = {
   slug: string;
@@ -63,6 +64,14 @@ const games: GameSummary[] = [
     description: '動画をドラッグ＆ドロップするだけで高画質GIFを手早く作れるブラウザツール。',
     thumbnail: gifmakerThumbnail,
     controls: '動画ファイルをドロップし、設定を調整して GIF を作成',
+  },
+  {
+    slug: 'ramen',
+    url: '/dev-sandbox/tools/ramen/',
+    title: 'Rotate Ramen',
+    description: '三次元のラーメンをドラッグで回し、角度を変えて眺めるビジュアルツール。',
+    thumbnail: ramenThumbnail,
+    controls: 'ドラッグで回転、ホイールでズーム、スペースでリセット',
   },
 ];
 
