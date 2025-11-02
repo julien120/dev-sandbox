@@ -223,7 +223,7 @@ const resizeObserver = new ResizeObserver(resize);
 resizeObserver.observe(canvas);
 resize();
 
-let pointerSmoothing = 0.08;
+const pointerSmoothing = 0.08;
 
 const animate = () => {
   pointer.lerp(targetPointer, pointerSmoothing);

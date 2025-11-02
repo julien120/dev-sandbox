@@ -1,0 +1,130 @@
+:root {
+  color-scheme: light dark;
+  font-family: 'Noto Sans JP', system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  background: radial-gradient(circle at top, #f8fafc 0%, #e5e7eb 50%, #d1d5db 100%);
+  color: #0f172a;
+}
+
+main {
+  width: min(1040px, 92vw);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  padding: 48px 0;
+}
+
+header {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+
+header h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+}
+
+.uploader, .preview, .notes {
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(16px);
+}
+
+.upload-tile {
+  display: grid;
+  place-items: center;
+  border: 2px dashed #3b82f6;
+  border-radius: 16px;
+  padding: 32px;
+  cursor: pointer;
+  background: rgba(59, 130, 246, 0.08);
+  color: #1d4ed8;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.upload-tile:hover,
+.upload-tile:focus-within {
+  border-color: #2563eb;
+  background: rgba(59, 130, 246, 0.15);
+}
+
+#status {
+  margin-top: 16px;
+  font-size: 0.95rem;
+  min-height: 1.5em;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.actions button {
+  flex: 1;
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: white;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.actions button:hover:enabled {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.actions button:disabled {
+  cursor: not-allowed;
+  background: #94a3b8;
+}
+
+.preview {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 320px;
+}
+
+#preview-canvas {
+  max-width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.notes h2 {
+  margin-top: 0;
+}
+
+.notes ol {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
+.notes p {
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+@media (max-width: 720px) {
+  main {
+    padding: 32px 0;
+  }
+  .actions {
+    flex-direction: column;
+  }
+}

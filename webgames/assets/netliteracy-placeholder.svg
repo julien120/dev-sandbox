@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="320" height="180" viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="privacy-bg" x1="160" y1="0" x2="160" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#dbeafe"/>
+      <stop offset="1" stop-color="#94a3b8"/>
+    </linearGradient>
+    <linearGradient id="privacy-accent" x1="160" y1="60" x2="160" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="24" fill="url(#privacy-bg)"/>
+  <rect x="56" y="40" width="208" height="120" rx="18" fill="#0f172a" opacity="0.75"/>
+  <rect x="70" y="54" width="180" height="92" rx="14" fill="#e2e8f0"/>
+  <circle cx="128" cy="86" r="26" fill="#64748b" opacity="0.35"/>
+  <rect x="166" y="74" width="70" height="24" rx="12" fill="#94a3b8" opacity="0.45"/>
+  <path d="M85 126h152" stroke="#cbd5f5" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+  <rect x="110" y="68" width="36" height="36" rx="12" fill="#f8fafc" opacity="0.65"/>
+  <path d="M108 60c16 10 38 10 54 0" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+  <path d="M112 102c14 6 30 6 44 0" stroke="#2563eb" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+  <rect x="0" y="0" width="320" height="180" fill="url(#privacy-accent)" opacity="0.12"/>
+  <text x="160" y="156" text-anchor="middle" font-family="'Noto Sans JP', sans-serif" font-size="16" fill="#1f2937">プライバシー保護</text>
+</svg>

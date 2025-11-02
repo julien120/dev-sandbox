@@ -1,0 +1,26 @@
+<svg width="640" height="360" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="50%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.2)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.6)"/>
+    </linearGradient>
+    <style>
+      .bg { fill: url(#grad); }
+      .card { fill: url(#card); stroke: rgba(255,255,255,0.5); stroke-width: 2; }
+      .text { fill: #ffffff; font-family: 'Inter', 'Noto Sans JP', sans-serif; font-weight: 600; }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="640" height="360" rx="32"/>
+  <g transform="translate(80 80)">
+    <rect class="card" x="0" y="0" width="220" height="200" rx="24"/>
+    <rect class="card" x="260" y="0" width="220" height="200" rx="24" opacity="0.8"/>
+    <rect class="card" x="120" y="220" width="200" height="28" rx="14" opacity="0.5"/>
+  </g>
+  <text class="text" x="320" y="120" text-anchor="middle" font-size="24">Style Forge</text>
+  <text class="text" x="320" y="160" text-anchor="middle" font-size="20">MeCab 文体変換ツール</text>
+</svg>

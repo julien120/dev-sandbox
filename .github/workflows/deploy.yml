@@ -32,6 +32,8 @@ jobs:
           npm --workspace apps/gifmaker run build
           npm --workspace apps/ramen run build
           npm --workspace apps/vj run build
+          npm --workspace apps/netliteracy run build
+          npm --workspace apps/styleforge run build
           npm --workspace apps/tetris run build || true
       - name: Bundle artifact
         run: |
@@ -54,7 +56,7 @@ jobs:
               echo "WARN: dist/$game is missing (check $game build)"
             fi
           done
-          for tool in gifmaker ramen vj; do
+          for tool in gifmaker ramen vj netliteracy styleforge; do
             if [ -d "dist/$tool" ]; then
               mkdir -p "_site/tools/$tool"
               cp -r "dist/$tool"/. "_site/tools/$tool"

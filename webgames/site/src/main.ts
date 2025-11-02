@@ -7,6 +7,8 @@ import tetrisThumbnail from '../../assets/tetris-placeholder.svg?url';
 import gifmakerThumbnail from '../../assets/gifmaker-placeholder.svg?url';
 import ramenThumbnail from '../../assets/ramen-placeholder.svg?url';
 import vjThumbnail from '../../assets/vj-placeholder.svg?url';
+import netliteracyThumbnail from '../../assets/netliteracy-placeholder.svg?url';
+import styleforgeThumbnail from '../../assets/styleforge-placeholder.svg?url';
 
 type GameSummary = {
   slug: string;
@@ -81,6 +83,22 @@ const games: GameSummary[] = [
     description: 'Tone.js と 3D 演出で音と映像が連動するインタラクティブな VJ ツール。',
     thumbnail: vjThumbnail,
     controls: 'クリックで開始、マウス移動で音色とカメラ、クリックでアクセント、スペースでコード変更',
+  },
+  {
+    slug: 'netliteracy',
+    url: '/dev-sandbox/tools/netliteracy/',
+    title: 'ネットリテラシー上級者の写真投稿',
+    description: '写真の顔を自動で検知してぼかし、安心して共有できる画像を作成します。',
+    thumbnail: netliteracyThumbnail,
+    controls: '写真をドロップ → 顔をぼかす → 画像をダウンロード',
+  },
+  {
+    slug: 'styleforge',
+    url: '/dev-sandbox/tools/styleforge/',
+    title: '文体スタイル変換ファクトリー',
+    description: '文章をMeCabで解析し、選んだ文体に合わせてリライトするモダンなテキストツール。',
+    thumbnail: styleforgeThumbnail,
+    controls: '文章を入力 → 文体を選択 → 変換結果と形態素解析を確認',
   },
 ];
 

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/dev-sandbox/favicon.svg" />
+    <title>ネットリテラシー上級者の写真投稿</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>ネットリテラシー上級者の写真投稿</h1>
+        <p>写真をアップロードすると顔部分を自動でぼかします。</p>
+      </header>
+      <section class="uploader">
+        <label class="upload-tile" for="file-input" id="dropzone">
+          <span>写真をクリックまたはドロップ</span>
+          <input id="file-input" type="file" accept="image/*" hidden />
+        </label>
+        <div id="status" aria-live="polite">写真を選択してください。</div>
+        <div class="actions">
+          <button id="detect-button" disabled>顔をぼかす</button>
+          <button id="download-button" disabled>ぼかした画像をダウンロード</button>
+        </div>
+      </section>
+      <section class="preview">
+        <canvas id="preview-canvas" aria-label="ぼかし結果プレビュー"></canvas>
+      </section>
+      <aside class="notes">
+        <h2>使い方</h2>
+        <ol>
+          <li>写真をドロップまたは選択します。</li>
+          <li>「顔をぼかす」を押すと顔を検出して自動でぼかします。</li>
+          <li>「ダウンロード」を押して加工済み写真を保存できます。</li>
+        </ol>
+        <p>※ FaceDetector API に対応したブラウザ（Chrome / Edge / Samsung Internet 等）を推奨します。</p>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
