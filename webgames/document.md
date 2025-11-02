@@ -52,30 +52,30 @@ graph TD
 ## ワークスペース一覧
 
 | Workspace          | 種別           | base / 出力先                     | 主な役割                                                         | 特記事項                                                                                                |
-| ------------------ | -------------- | --------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| ------------------ | -------------- | --------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --- | ---------------------- |
 | `site`             | ポータル       | `/dev-sandbox/` → `dist/site`     | 各ゲーム／ツールへのランディングページ。                         | Vite 単体。新アプリ追加時はカードを更新。                                                               |
 | `packages/engine`  | 共有ライブラリ | ESM パッケージ                    | ゲームループ (`ticker.ts`)、シーン管理、入力、衝突判定等を提供。 | `@webgames/engine` としてローカル参照。                                                                 |
 | `apps/flappy`      | ゲーム         | `/dev-sandbox/games/flappy/`      | フラッピーバード系。`@webgames/engine` 依存。                    | 追加アセットなし。                                                                                      |
 | `apps/space`       | ゲーム         | `/dev-sandbox/games/space/`       | 縦スクロールシューティング。                                     | 追加アセットなし。                                                                                      |
 | `apps/suika`       | ゲーム         | `/dev-sandbox/games/suika/`       | 合体パズル（スイカゲーム）。                                     | 追加アセットなし。                                                                                      |
-| `apps/tetris`      | ゲーム         | `/dev-sandbox/games/tetris/`      | テトリス実装。                                                   | CI では `npm --workspace apps/tetris run build || true` として失敗許容。                                |
-| `apps/emotion`     | ツール         | `/dev-sandbox/games/emotion/`     | Web カメラ＋表情推定のミニゲーム。                              | MediaPipe と ONNX Runtime のアセット同期が必要。                                                        |
+| `apps/tetris`      | ゲーム         | `/dev-sandbox/games/tetris/`      | テトリス実装。                                                   | CI では `npm --workspace apps/tetris run build                                                          |     | true` として失敗許容。 |
+| `apps/emotion`     | ツール         | `/dev-sandbox/games/emotion/`     | Web カメラ＋表情推定のミニゲーム。                               | MediaPipe と ONNX Runtime のアセット同期が必要。                                                        |
 | `apps/gifmaker`    | ツール         | `/dev-sandbox/tools/gifmaker/`    | ブラウザだけで GIF 生成。                                        | FFmpeg WASM の worker / wasm / data を `public/ffmpeg` にコピー。                                       |
 | `apps/ramen`       | ツール         | `/dev-sandbox/tools/ramen/`       | 3D ラーメンモデル閲覧。                                          | `sync-assets.mjs` でプレースホルダーアセットを配置。                                                    |
 | `apps/vj`          | ツール         | `/dev-sandbox/tools/vj/`          | Tone.js × Three.js のインタラクティブ VJ ツール。                | 同上。                                                                                                  |
 | `apps/netliteracy` | ツール         | `/dev-sandbox/tools/netliteracy/` | 顔検出＆ぼかし。                                                 | MediaPipe Face Detector / Landmarker 資産を同期。                                                       |
 | `apps/styleforge`  | ツール         | `/dev-sandbox/tools/styleforge/`  | MeCab を用いた文体変換＆解析ツール。                             | `sync-assets.mjs` が `libmecab.wasm/.data` を `public/mecab/` に同期。辞書ファイルは約 53 MB と大きめ。 |
-| `apps/ningen`      | ツール         | `/dev-sandbox/tools/ningen/`      | 『人間失格』の頻出語を可視化するワードクラウドラボ。             | `public/corpus/ningen.txt` を参照し、`sync-assets.mjs` で MeCab WASM を同期。                          |
+| `apps/ningen`      | ツール         | `/dev-sandbox/tools/ningen/`      | 『人間失格』の頻出語を可視化するワードクラウドラボ。             | `public/corpus/ningen.txt` を参照し、`sync-assets.mjs` で MeCab WASM を同期。                           |
 
 ## アセット同期スクリプト
 
-| アプリ      | 同期コマンド                             | 同期対象                                               | 備考                                                |
-| ----------- | ---------------------------------------- | ------------------------------------------------------ | --------------------------------------------------- |
-| emotion     | `node scripts/sync-mediapipe-assets.mjs` | MediaPipe Face Landmarker / WebAssembly & ONNX Runtime | カメラ推論に必要。                                  |
-| gifmaker    | `node scripts/sync-ffmpeg-core.mjs`      | `@ffmpeg/core` の worker / wasm / data                 | ブラウザ上で FFmpeg を動かすため。                  |
-| ramen / vj  | `node scripts/sync-assets.mjs`           | プレースホルダーの 3D アセット                         | 将来差し替え前提。                                  |
-| netliteracy | `node scripts/sync-assets.mjs`           | MediaPipe Face Detector / Landmarker モデル＆WASM      | `.tflite` / `.task` を `public/mediapipe/` へ展開。 |
-| styleforge  | `node scripts/sync-assets.mjs`           | MeCab WASM (`libmecab.wasm/.data`)                     | `public/mecab/` に同期、dev/build 前に自動実行。    |
+| アプリ      | 同期コマンド                             | 同期対象                                               | 備考                                                        |
+| ----------- | ---------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
+| emotion     | `node scripts/sync-mediapipe-assets.mjs` | MediaPipe Face Landmarker / WebAssembly & ONNX Runtime | カメラ推論に必要。                                          |
+| gifmaker    | `node scripts/sync-ffmpeg-core.mjs`      | `@ffmpeg/core` の worker / wasm / data                 | ブラウザ上で FFmpeg を動かすため。                          |
+| ramen / vj  | `node scripts/sync-assets.mjs`           | プレースホルダーの 3D アセット                         | 将来差し替え前提。                                          |
+| netliteracy | `node scripts/sync-assets.mjs`           | MediaPipe Face Detector / Landmarker モデル＆WASM      | `.tflite` / `.task` を `public/mediapipe/` へ展開。         |
+| styleforge  | `node scripts/sync-assets.mjs`           | MeCab WASM (`libmecab.wasm/.data`)                     | `public/mecab/` に同期、dev/build 前に自動実行。            |
 | ningen      | `node scripts/sync-assets.mjs`           | MeCab WASM (`libmecab.wasm/.data`)                     | `public/mecab/` に同期、`public/corpus/ningen.txt` を参照。 |
 
 これらのスクリプトは `predev` / `prebuild` で連携済み。新しい外部アセットを追加する際は同様の仕組みを採用すると安全です。

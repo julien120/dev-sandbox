@@ -12,7 +12,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "mecab-wasm": "^1.0.3"
+    "d3-force": "^3.0.0",
+    "mecab-wasm": "^1.0.3",
+    "d3-dispatch": "^3.0.1",
+    "d3-quadtree": "^3.0.1",
+    "d3-timer": "^3.0.1"
   },
   "devDependencies": {
     "vite": "^5.0.0"

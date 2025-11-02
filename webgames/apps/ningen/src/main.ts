@@ -1,4 +1,5 @@
 import './style.css';
+import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from 'd3-force';
 import { Mecab, type MecabRawToken } from './mecab-client';
 
 type WordStat = {
@@ -6,6 +7,33 @@ type WordStat = {
   base: string;
   reading: string;
   count: number;
+};
+
+type PlacedWord = {
+  stat: WordStat;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontSize: number;
+  color: string;
+};
+
+type NetworkNode = {
+  id: string;
+  label: string;
+  reading: string;
+  count: number;
+  radius: number;
+  color: string;
+  x: number;
+  y: number;
+};
+
+type NetworkLink = {
+  source: string;
+  target: string;
+  weight: number;
 };
 
 const STOPWORDS = new Set([
@@ -42,7 +70,6 @@ const STOPWORDS = new Set([
   'いる',
   'なる',
   'できる',
-  'なる',
   'これら',
   'それら',
   'どこ',
@@ -62,6 +89,19 @@ const STOPWORDS = new Set([
   '年',
 ]);
 
+const SENTENCE_BOUNDARY = new Set(['。', '！', '!', '？', '?', '…', '‥']);
+
+const palette = [
+  '#38bdf8',
+  '#a855f7',
+  '#f472b6',
+  '#facc15',
+  '#34d399',
+  '#60a5fa',
+  '#f97316',
+  '#fb7185',
+];
+
 const app = document.querySelector<HTMLDivElement>('#app');
 
 if (!app) {
@@ -72,7 +112,7 @@ app.innerHTML = `
   <section class="header">
     <h1>人間失格ワードクラウドラボ</h1>
     <p>
-      青空文庫版『人間失格』を MeCab で形態素解析し、名詞頻度からワードクラウドを生成します。重要度の閾値や上限語数を調整して、太宰治の語彙の揺らぎを可視化しましょう。
+      青空文庫版『人間失格』を MeCab で形態素解析し、名詞頻度からワードクラウドを生成します。閾値や上限語数を調整して語彙を可視化し、共起ネットワークでも語の関係性を確認しましょう。
     </p>
   </section>
   <div class="status" id="status" data-state="loading">データを解析しています…</div>
@@ -96,7 +136,24 @@ app.innerHTML = `
       <canvas id="cloud-canvas" width="1000" height="600" aria-label="ワードクラウド"></canvas>
       <p class="status" id="cloud-status" data-state="pending">生成準備中です。</p>
       <div class="download-row">
-        <span id="legend"></span>
+        <span id="cloud-legend"></span>
+      </div>
+    </article>
+    <article class="card network-card">
+      <h2>共起ネットワーク</h2>
+      <div class="controls">
+        <label for="coocc-threshold">最小共起回数</label>
+        <input id="coocc-threshold" type="number" min="1" max="30" value="3" />
+        <label for="coocc-max-nodes">最大ノード数</label>
+        <input id="coocc-max-nodes" type="number" min="10" max="80" value="45" />
+      </div>
+      <div class="controls">
+        <button id="regenerate-network" type="button">共起ネットワークを再生成</button>
+      </div>
+      <canvas id="network-canvas" width="1000" height="600" aria-label="共起ネットワーク"></canvas>
+      <p class="status" id="network-status" data-state="pending">生成準備中です。</p>
+      <div class="download-row">
+        <span id="network-legend"></span>
       </div>
     </article>
     <article class="card">
@@ -123,8 +180,14 @@ const minCountEl = document.querySelector<HTMLInputElement>('#min-count');
 const maxWordsEl = document.querySelector<HTMLInputElement>('#max-words');
 const regenerateButton = document.querySelector<HTMLButtonElement>('#regenerate');
 const downloadButton = document.querySelector<HTMLButtonElement>('#download');
-const canvas = document.querySelector<HTMLCanvasElement>('#cloud-canvas');
-const legendEl = document.querySelector<HTMLSpanElement>('#legend');
+const cloudCanvas = document.querySelector<HTMLCanvasElement>('#cloud-canvas');
+const cloudLegendEl = document.querySelector<HTMLSpanElement>('#cloud-legend');
+const networkCanvas = document.querySelector<HTMLCanvasElement>('#network-canvas');
+const networkStatusEl = document.querySelector<HTMLDivElement>('#network-status');
+const cooccThresholdEl = document.querySelector<HTMLInputElement>('#coocc-threshold');
+const cooccMaxNodesEl = document.querySelector<HTMLInputElement>('#coocc-max-nodes');
+const regenerateNetworkButton = document.querySelector<HTMLButtonElement>('#regenerate-network');
+const networkLegendEl = document.querySelector<HTMLSpanElement>('#network-legend');
 
 if (
   !statusEl ||
@@ -135,13 +198,20 @@ if (
   !maxWordsEl ||
   !regenerateButton ||
   !downloadButton ||
-  !canvas ||
-  !legendEl
+  !cloudCanvas ||
+  !cloudLegendEl ||
+  !networkCanvas ||
+  !networkStatusEl ||
+  !cooccThresholdEl ||
+  !cooccMaxNodesEl ||
+  !regenerateNetworkButton ||
+  !networkLegendEl
 ) {
   throw new Error('必要なDOM要素が見つかりません');
 }
 
 type AnalysisResult = {
+  rawTokens: MecabRawToken[];
   tokens: MecabRawToken[];
   stats: WordStat[];
   totalTokens: number;
@@ -149,6 +219,9 @@ type AnalysisResult = {
 };
 
 let analysis: AnalysisResult | null = null;
+let placedWords: PlacedWord[] = [];
+let networkNodes: NetworkNode[] = [];
+let networkLinks: NetworkLink[] = [];
 
 const fetchCorpus = async (): Promise<string> => {
   const url = `${import.meta.env.BASE_URL ?? '/'}corpus/ningen.txt`;
@@ -175,10 +248,7 @@ const buildStats = (tokens: MecabRawToken[]): WordStat[] => {
       ? token.dictionary_form
       : token.word
     ).trim();
-    if (!key || STOPWORDS.has(key)) {
-      return;
-    }
-    if (key.length <= 1) {
+    if (!key || STOPWORDS.has(key) || key.length <= 1) {
       return;
     }
     const entry = map.get(key);
@@ -212,6 +282,7 @@ const analyseText = async () => {
   const filteredTokens = buildTokens(rawTokens);
   const stats = buildStats(filteredTokens);
   analysis = {
+    rawTokens,
     tokens: filteredTokens,
     stats,
     totalTokens: rawTokens.length,
@@ -262,81 +333,21 @@ const escapeHtml = (value: string) =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
-const palette = [
-  '#38bdf8',
-  '#a855f7',
-  '#f472b6',
-  '#facc15',
-  '#34d399',
-  '#60a5fa',
-  '#f97316',
-  '#f87171',
-];
-
-type PlacedWord = {
-  stat: WordStat;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  fontSize: number;
-  color: string;
-};
-
-let placedWords: PlacedWord[] = [];
-
-const generateWordCloud = () => {
-  if (!analysis) {
-    return;
-  }
-  const minCount = Number.parseInt(minCountEl.value, 10) || 1;
-  const maxWords = Number.parseInt(maxWordsEl.value, 10) || 120;
-  const filtered = analysis.stats.filter((item) => item.count >= minCount).slice(0, maxWords);
-
-  if (!filtered.length) {
-    cloudStatusEl.dataset.state = 'error';
-    cloudStatusEl.textContent = '指定条件を満たす語がありません。閾値を下げてください。';
-    placedWords = [];
-    downloadButton.disabled = true;
-    return;
-  }
-
-  cloudStatusEl.dataset.state = 'loading';
-  cloudStatusEl.textContent = `レイアウト計算中…（${filtered.length} 語）`;
-
-  const maxCount = filtered[0]?.count ?? 1;
-  const minCountInSet = filtered[filtered.length - 1]?.count ?? 1;
-
-  placedWords = computeLayout(filtered, minCountInSet, maxCount);
-  drawWordCloud(placedWords);
-  cloudStatusEl.dataset.state = 'ready';
-  cloudStatusEl.textContent = `生成済み：${filtered.length} 語`;
-  legendEl.textContent = '';
-  downloadButton.disabled = false;
-};
-
 const computeLayout = (words: WordStat[], minCount: number, maxCount: number): PlacedWord[] => {
   const placements: PlacedWord[] = [];
-  const ctx = canvas.getContext('2d');
+  const ctx = cloudCanvas.getContext('2d');
   if (!ctx) {
     return placements;
   }
-  const width = canvas.width;
-  const height = canvas.height;
+  const width = cloudCanvas.width;
+  const height = cloudCanvas.height;
   const centerX = width / 2;
   const centerY = height / 2;
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
   const baseStep = 20;
   const padding = 8;
 
-  const toBox = (x: number, y: number, w: number, h: number) => ({
-    x,
-    y,
-    width: w,
-    height: h,
-  });
-
-  const intersects = (box: ReturnType<typeof toBox>) =>
+  const intersects = (box: { x: number; y: number; width: number; height: number }) =>
     placements.some((placed) => {
       const other = {
         x: placed.x - padding / 2,
@@ -365,7 +376,7 @@ const computeLayout = (words: WordStat[], minCount: number, maxCount: number): P
     let attempt = 0;
     let x = 0;
     let y = 0;
-    let box;
+    let box: { x: number; y: number; width: number; height: number };
 
     do {
       const offsetX = radius * Math.cos(angle);
@@ -373,20 +384,19 @@ const computeLayout = (words: WordStat[], minCount: number, maxCount: number): P
       x = centerX + offsetX - textWidth / 2;
       y = centerY + offsetY - textHeight / 2;
 
-      box = toBox(x, y, textWidth, textHeight);
+      box = { x, y, width: textWidth, height: textHeight };
       radius += baseStep * 0.3;
       angle += goldenAngle * 0.05;
       attempt += 1;
-    } while (intersects(box!) && attempt < 800);
+    } while (intersects(box) && attempt < 800);
 
-    // Clamp to canvas bounds
-    box!.x = Math.min(Math.max(0, box!.x), width - textWidth);
-    box!.y = Math.min(Math.max(0, box!.y), height - textHeight);
+    box.x = Math.min(Math.max(0, box.x), width - textWidth);
+    box.y = Math.min(Math.max(0, box.y), height - textHeight);
 
     placements.push({
       stat: word,
-      x: box!.x,
-      y: box!.y,
+      x: box.x,
+      y: box.y,
       width: textWidth,
       height: textHeight,
       fontSize,
@@ -398,14 +408,15 @@ const computeLayout = (words: WordStat[], minCount: number, maxCount: number): P
 };
 
 const drawWordCloud = (placements: PlacedWord[]) => {
-  const ctx = canvas.getContext('2d');
+  const ctx = cloudCanvas.getContext('2d');
   if (!ctx) {
     return;
   }
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.save();
-  ctx.textBaseline = 'top';
+  ctx.clearRect(0, 0, cloudCanvas.width, cloudCanvas.height);
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+  ctx.fillRect(0, 0, cloudCanvas.width, cloudCanvas.height);
 
+  ctx.textBaseline = 'top';
   placements
     .slice()
     .sort((a, b) => a.fontSize - b.fontSize)
@@ -417,22 +428,261 @@ const drawWordCloud = (placements: PlacedWord[]) => {
       ctx.fillStyle = gradient;
       ctx.fillText(item.stat.base, item.x, item.y);
     });
+};
 
-  ctx.restore();
+const generateWordCloud = () => {
+  if (!analysis) {
+    return;
+  }
+  const minCount = Number.parseInt(minCountEl.value, 10) || 1;
+  const maxWords = Number.parseInt(maxWordsEl.value, 10) || 120;
+  const filtered = analysis.stats.filter((item) => item.count >= minCount).slice(0, maxWords);
+
+  if (!filtered.length) {
+    cloudStatusEl.dataset.state = 'error';
+    cloudStatusEl.textContent = '指定条件を満たす語がありません。閾値を下げてください。';
+    placedWords = [];
+    downloadButton.disabled = true;
+    return;
+  }
+
+  cloudStatusEl.dataset.state = 'loading';
+  cloudStatusEl.textContent = `レイアウト計算中…（${filtered.length} 語）`;
+
+  const maxCount = filtered[0]?.count ?? 1;
+  const minInSet = filtered[filtered.length - 1]?.count ?? 1;
+  placedWords = computeLayout(filtered, minInSet, maxCount);
+  drawWordCloud(placedWords);
+  cloudStatusEl.dataset.state = 'ready';
+  cloudStatusEl.textContent = `生成済み：${filtered.length} 語`;
+  cloudLegendEl.textContent = '';
+  downloadButton.disabled = false;
+};
+
+const computeCooccurrencePairs = (
+  rawTokens: MecabRawToken[],
+  allowed: Set<string>,
+): Map<string, number> => {
+  const pairs = new Map<string, number>();
+  let sentenceNouns: string[] = [];
+
+  const flush = () => {
+    if (!sentenceNouns.length) {
+      return;
+    }
+    const uniques = [...new Set(sentenceNouns)];
+    for (let i = 0; i < uniques.length; i += 1) {
+      for (let j = i + 1; j < uniques.length; j += 1) {
+        const a = uniques[i]!;
+        const b = uniques[j]!;
+        if (!allowed.has(a) || !allowed.has(b)) {
+          continue;
+        }
+        const key = a < b ? `${a}__${b}` : `${b}__${a}`;
+        pairs.set(key, (pairs.get(key) ?? 0) + 1);
+      }
+    }
+    sentenceNouns = [];
+  };
+
+  rawTokens.forEach((token) => {
+    if (token.pos === '名詞') {
+      if (
+        token.pos_detail1 === '数' ||
+        token.pos_detail1 === '非自立' ||
+        token.pos_detail1 === '代名詞'
+      ) {
+        return;
+      }
+      const base =
+        token.dictionary_form && token.dictionary_form !== '*'
+          ? token.dictionary_form
+          : token.word;
+      if (!base || STOPWORDS.has(base) || base.length <= 1) {
+        return;
+      }
+      sentenceNouns.push(base);
+      return;
+    }
+    if (token.pos === '記号' && SENTENCE_BOUNDARY.has(token.word)) {
+      flush();
+    }
+  });
+
+  flush();
+
+  return pairs;
+};
+
+const generateCooccurrenceNetwork = () => {
+  if (!analysis) {
+    return;
+  }
+  const requestedMinPair = Number.parseInt(cooccThresholdEl.value, 10) || 3;
+  const maxNodes = Number.parseInt(cooccMaxNodesEl.value, 10) || 45;
+
+  networkStatusEl.dataset.state = 'loading';
+  networkStatusEl.textContent = '共起ネットワークを構築しています…';
+
+  const rankedNodes = analysis.stats.slice(0, maxNodes);
+  const allowed = new Set(rankedNodes.map((stat) => stat.base));
+  const pairCounts = computeCooccurrencePairs(analysis.rawTokens, allowed);
+  const sortedPairs = [...pairCounts.entries()].sort((a, b) => b[1] - a[1]);
+
+  let threshold = requestedMinPair;
+  let links: NetworkLink[] = [];
+
+  while (threshold >= 1) {
+    links = sortedPairs
+      .filter(([, weight]) => weight >= threshold)
+      .map(([key, weight]) => {
+        const [a, b] = key.split('__');
+        return { source: a!, target: b!, weight };
+      });
+    if (links.length || threshold === 1) {
+      break;
+    }
+    threshold -= 1;
+  }
+
+  if (!links.length) {
+    networkStatusEl.dataset.state = 'error';
+    networkStatusEl.textContent = '共起が見つかりませんでした。条件を見直してください。';
+    networkNodes = [];
+    networkLinks = [];
+    drawCooccurrenceNetwork();
+    return;
+  }
+
+  if (threshold !== requestedMinPair) {
+    networkStatusEl.dataset.state = 'loading';
+    networkStatusEl.textContent = `指定された最小共起回数では共起が見つかりませんでした。閾値 ${threshold} で生成しています。`;
+  }
+
+  const nodeMap = new Map<string, WordStat>();
+  rankedNodes.forEach((stat) => nodeMap.set(stat.base, stat));
+
+  const usedNodes = new Set<string>();
+  links.forEach((link) => {
+    usedNodes.add(link.source);
+    usedNodes.add(link.target);
+  });
+
+  const selectedNodes = rankedNodes.filter((stat) => usedNodes.has(stat.base));
+  const maxCount = selectedNodes[0]?.count ?? 1;
+
+  const simulationNodes = selectedNodes.map((stat, index) => ({
+    id: stat.base,
+    label: stat.base,
+    reading: stat.reading,
+    count: stat.count,
+    radius: 18 + (stat.count / maxCount) * 24,
+    color: palette[index % palette.length],
+  }));
+
+  const simulationLinks = links.map((link) => ({
+    source: link.source,
+    target: link.target,
+    weight: link.weight,
+  }));
+
+  const simulation = forceSimulation(simulationNodes as any)
+    .force(
+      'link',
+      forceLink(simulationLinks)
+        .id((d: any) => d.id)
+        .distance((d) => 220 - Math.min(150, d.weight * 12))
+        .strength(0.9),
+    )
+    .force('charge', forceManyBody().strength(-320))
+    .force('center', forceCenter(networkCanvas.width / 2, networkCanvas.height / 2))
+    .force('collide', forceCollide().radius((d: any) => d.radius + 16).strength(1));
+
+  simulation.stop();
+  for (let i = 0; i < 360; i += 1) {
+    simulation.tick();
+  }
+
+  networkNodes = simulationNodes as NetworkNode[];
+  networkLinks = simulationLinks;
+  drawCooccurrenceNetwork();
+  networkStatusEl.dataset.state = 'ready';
+  networkStatusEl.textContent = `生成済み：ノード ${networkNodes.length} 件／エッジ ${networkLinks.length} 本${
+    threshold !== requestedMinPair ? `（閾値 ${threshold} へ自動調整）` : ''
+  }`;
+  networkLegendEl.textContent = '';
+};
+
+const drawCooccurrenceNetwork = () => {
+  const ctx = networkCanvas.getContext('2d');
+  if (!ctx) {
+    return;
+  }
+  ctx.clearRect(0, 0, networkCanvas.width, networkCanvas.height);
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, networkCanvas.width, networkCanvas.height);
+
+  if (!networkNodes.length) {
+    return;
+  }
+
+  const maxWeight = networkLinks.reduce((m, link) => Math.max(m, link.weight), 1);
+  ctx.lineCap = 'round';
+
+  networkLinks.forEach((link) => {
+    const source = networkNodes.find((node) => node.id === link.source);
+    const target = networkNodes.find((node) => node.id === link.target);
+    if (!source || !target) {
+      return;
+    }
+    const thickness = 1 + (link.weight / maxWeight) * 4;
+    const gradient = ctx.createLinearGradient(source.x, source.y, target.x, target.y);
+    gradient.addColorStop(0, `${source.color}bb`);
+    gradient.addColorStop(1, `${target.color}bb`);
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = thickness;
+    ctx.beginPath();
+    ctx.moveTo(source.x, source.y);
+    ctx.lineTo(target.x, target.y);
+    ctx.stroke();
+  });
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  networkNodes.forEach((node) => {
+    const gradient = ctx.createRadialGradient(
+      node.x,
+      node.y,
+      node.radius * 0.1,
+      node.x,
+      node.y,
+      node.radius,
+    );
+    gradient.addColorStop(0, `${node.color}ff`);
+    gradient.addColorStop(1, `${node.color}aa`);
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = `600 ${Math.max(14, node.radius * 0.7)}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`;
+    ctx.fillText(node.label, node.x, node.y);
+  });
 };
 
 const handleDownload = () => {
   const exportCanvas = document.createElement('canvas');
-  exportCanvas.width = canvas.width;
-  exportCanvas.height = canvas.height;
+  exportCanvas.width = cloudCanvas.width;
+  exportCanvas.height = cloudCanvas.height;
   const exportCtx = exportCanvas.getContext('2d');
-  const srcCtx = canvas.getContext('2d');
+  const srcCtx = cloudCanvas.getContext('2d');
   if (!exportCtx || !srcCtx) {
     return;
   }
   exportCtx.fillStyle = '#ffffff';
   exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-  exportCtx.drawImage(canvas, 0, 0);
+  exportCtx.drawImage(cloudCanvas, 0, 0);
 
   exportCanvas.toBlob((blob) => {
     if (!blob) {
@@ -447,38 +697,79 @@ const handleDownload = () => {
   }, 'image/png');
 };
 
-regenerateButton.addEventListener('click', generateWordCloud);
-downloadButton.addEventListener('click', handleDownload);
-
-const handleCanvasPointer = (event: MouseEvent) => {
+const handleCloudPointer = (event: MouseEvent) => {
   if (!placedWords.length) {
-    legendEl.textContent = '';
+    cloudLegendEl.textContent = '';
     return;
   }
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
+  const rect = cloudCanvas.getBoundingClientRect();
+  const scaleX = cloudCanvas.width / rect.width;
+  const scaleY = cloudCanvas.height / rect.height;
   const x = (event.clientX - rect.left) * scaleX;
   const y = (event.clientY - rect.top) * scaleY;
   const match = placedWords.find(
-    (word) => x >= word.x && x <= word.x + word.width && y >= word.y && y <= word.y + word.height,
+    (word) =>
+      x >= word.x &&
+      x <= word.x + word.width &&
+      y >= word.y &&
+      y <= word.y + word.height,
   );
   if (match) {
-    legendEl.textContent = `${match.stat.base}（${match.stat.reading}）: ${match.stat.count} 回`;
+    cloudLegendEl.textContent = `${match.stat.base}（${match.stat.reading}）: ${match.stat.count} 回`;
   } else if (event.type === 'mousemove') {
-    legendEl.textContent = '';
+    cloudLegendEl.textContent = '';
   }
 };
 
-canvas.addEventListener('mousemove', handleCanvasPointer);
-canvas.addEventListener('click', handleCanvasPointer);
-canvas.addEventListener('mouseleave', () => {
-  legendEl.textContent = '';
+const handleNetworkPointer = (event: MouseEvent) => {
+  if (!networkNodes.length) {
+    networkLegendEl.textContent = '';
+    return;
+  }
+  const rect = networkCanvas.getBoundingClientRect();
+  const scaleX = networkCanvas.width / rect.width;
+  const scaleY = networkCanvas.height / rect.height;
+  const x = (event.clientX - rect.left) * scaleX;
+  const y = (event.clientY - rect.top) * scaleY;
+  const match = networkNodes.find((node) => {
+    const dx = x - node.x;
+    const dy = y - node.y;
+    return Math.sqrt(dx * dx + dy * dy) <= node.radius;
+  });
+  if (match) {
+    const neighbors = networkLinks
+      .filter((link) => link.source === match.id || link.target === match.id)
+      .map((link) => (link.source === match.id ? link.target : link.source))
+      .join('、');
+    networkLegendEl.textContent = `${match.label}（${match.reading}）: ${match.count} 回 / 共起: ${
+      neighbors || 'なし'
+    }`;
+  } else if (event.type === 'mousemove') {
+    networkLegendEl.textContent = '';
+  }
+};
+
+regenerateButton.addEventListener('click', generateWordCloud);
+downloadButton.addEventListener('click', handleDownload);
+cloudCanvas.addEventListener('mousemove', handleCloudPointer);
+cloudCanvas.addEventListener('click', handleCloudPointer);
+cloudCanvas.addEventListener('mouseleave', () => {
+  cloudLegendEl.textContent = '';
+});
+
+regenerateNetworkButton.addEventListener('click', generateCooccurrenceNetwork);
+networkCanvas.addEventListener('mousemove', handleNetworkPointer);
+networkCanvas.addEventListener('click', handleNetworkPointer);
+networkCanvas.addEventListener('mouseleave', () => {
+  networkLegendEl.textContent = '';
 });
 
 Promise.resolve()
   .then(() => analyseText())
-  .then(() => generateWordCloud())
+  .then(() => {
+    generateWordCloud();
+    generateCooccurrenceNetwork();
+  })
   .catch((error) => {
     statusEl.dataset.state = 'error';
     statusEl.textContent = '初期化中にエラーが発生しました。コンソールをご確認ください。';
