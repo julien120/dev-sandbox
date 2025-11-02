@@ -1,0 +1,70 @@
+(function(){const t=document.createElement("link").relList;if(t&&t.supports&&t.supports("modulepreload"))return;for(const n of document.querySelectorAll('link[rel="modulepreload"]'))a(n);new MutationObserver(n=>{for(const o of n)if(o.type==="childList")for(const s of o.addedNodes)s.tagName==="LINK"&&s.rel==="modulepreload"&&a(s)}).observe(document,{childList:!0,subtree:!0});function r(n){const o={};return n.integrity&&(o.integrity=n.integrity),n.referrerPolicy&&(o.referrerPolicy=n.referrerPolicy),n.crossOrigin==="use-credentials"?o.credentials="include":n.crossOrigin==="anonymous"?o.credentials="omit":o.credentials="same-origin",o}function a(n){if(n.ep)return;n.ep=!0;const o=r(n);fetch(n.href,o)}})();const G="modulepreload",J=function(e){return"/dev-sandbox/tools/silhouette/"+e},N={},Q=function(t,r,a){let n=Promise.resolve();if(r&&r.length>0){document.getElementsByTagName("link");const s=document.querySelector("meta[property=csp-nonce]"),l=(s==null?void 0:s.nonce)||(s==null?void 0:s.getAttribute("nonce"));n=Promise.allSettled(r.map(i=>{if(i=J(i),i in N)return;N[i]=!0;const d=i.endsWith(".css"),g=d?'[rel="stylesheet"]':"";if(document.querySelector(`link[href="${i}"]${g}`))return;const u=document.createElement("link");if(u.rel=d?"stylesheet":G,d||(u.as="script"),u.crossOrigin="",u.href=i,l&&u.setAttribute("nonce",l),document.head.appendChild(u),d)return new Promise((m,h)=>{u.addEventListener("load",m),u.addEventListener("error",()=>h(new Error(`Unable to preload CSS for ${i}`)))})}))}function o(s){const l=new Event("vite:preloadError",{cancelable:!0});if(l.payload=s,window.dispatchEvent(l),!l.defaultPrevented)throw s}return n.then(s=>{for(const l of s||[])l.status==="rejected"&&o(l.reason);return t().catch(o)})},_=document.getElementById("app");if(!_)throw new Error("#app が見つかりません");_.innerHTML=`
+  <header>
+    <h1>週刊誌のサムネイル生成</h1>
+    <p>
+      画像をアップロードし、Robust Video Matting (RVM) と ONNX Runtime Web で人物を高精度に切り抜きシルエット化。縦書き文字を自由に配置して週刊誌風のサムネイルをブラウザだけで生成できます。
+    </p>
+  </header>
+  <section class="controls">
+    <fieldset>
+      <legend>ベース画像</legend>
+      <label>
+        人物画像
+        <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" />
+      </label>
+      <span id="image-status" class="status" data-state="pending">画像を選択してください。</span>
+    </fieldset>
+    <fieldset class="meta-grid">
+      <label>
+        シルエット色
+        <input id="silhouette-color" type="color" value="#0E5AFF" />
+      </label>
+      <label>
+        背景モード
+        <select id="background-mode">
+          <option value="transparent">透過</option>
+          <option value="solid">単色</option>
+        </select>
+      </label>
+      <label>
+        背景色
+        <input id="background-color" type="color" value="#FFFFFF" />
+      </label>
+      <label>
+        出力幅(px)
+        <input id="output-width" type="number" min="512" max="6000" step="10" value="2000" />
+      </label>
+      <label>
+        出力高さ(px)
+        <input id="output-height" type="number" min="512" max="6000" step="10" value="3000" />
+      </label>
+    </fieldset>
+    <fieldset>
+      <legend>縦書きテキスト</legend>
+      <label>
+        テキスト
+        <textarea id="text-input" placeholder="大物俳優">大物俳優</textarea>
+      </label>
+      <div class="meta-grid">
+        <label>
+          フォントサイズ(px)
+          <input id="font-size" type="number" min="60" max="600" step="10" value="280" />
+        </label>
+        <label>
+          ストローク幅(px)
+          <input id="stroke-width" type="number" min="0" max="40" step="1" value="8" />
+        </label>
+      </div>
+    </fieldset>
+    <div class="buttons">
+      <button id="generate-button" disabled>生成する</button>
+      <button id="download-button" disabled>PNGをダウンロード</button>
+    </div>
+    <span id="task-status" class="status" data-state="pending">Robust Video Matting の初期化を待っています…</span>
+  </section>
+  <section class="preview">
+    <p class="preview-hint">プレビューをクリック / タップすると縦書き文字の位置を移動できます。</p>
+    <canvas id="preview-canvas" width="2000" height="3000"></canvas>
+  </section>
+`;const c={imageInput:document.getElementById("image-input"),imageStatus:document.getElementById("image-status"),silhouetteColor:document.getElementById("silhouette-color"),backgroundMode:document.getElementById("background-mode"),backgroundColor:document.getElementById("background-color"),textInput:document.getElementById("text-input"),fontSize:document.getElementById("font-size"),strokeWidth:document.getElementById("stroke-width"),outputWidth:document.getElementById("output-width"),outputHeight:document.getElementById("output-height"),generateButton:document.getElementById("generate-button"),downloadButton:document.getElementById("download-button"),taskStatus:document.getElementById("task-status"),previewCanvas:document.getElementById("preview-canvas")},w={silhouetteColor:"#0E5AFF",backgroundMode:"transparent",backgroundColor:"#FFFFFF",text:"大物俳優",fontSize:280,strokeWidth:8,outputWidth:2e3,outputHeight:3e3,textAnchorX:.5,textAnchorY:.5};let p={...w},k=null,b=null,x=null,S=null,B=null,D=!1,L=null,O=null;const K="models/rvm_mobilenetv3_fp32.onnx",C=()=>{const e=!!(b||k);c.generateButton.disabled=!e||!B},M=(e,t="pending")=>{c.taskStatus.textContent=e,c.taskStatus.dataset.state=t},P=(e,t="pending")=>{c.imageStatus.textContent=e,c.imageStatus.dataset.state=t},X=()=>{const e=c.backgroundMode.value??"transparent";return{silhouetteColor:c.silhouetteColor.value||w.silhouetteColor,backgroundMode:e,backgroundColor:c.backgroundColor.value||w.backgroundColor,text:c.textInput.value.trim()||w.text,fontSize:y(Number(c.fontSize.value),40,800,w.fontSize),strokeWidth:y(Number(c.strokeWidth.value),0,80,w.strokeWidth),outputWidth:y(Number(c.outputWidth.value),512,6e3,w.outputWidth),outputHeight:y(Number(c.outputHeight.value),512,6e3,w.outputHeight),textAnchorX:y(p.textAnchorX??w.textAnchorX,0,1,w.textAnchorX),textAnchorY:y(p.textAnchorY??w.textAnchorY,0,1,w.textAnchorY)}},y=(e,t,r,a)=>Number.isNaN(e)?a:Math.min(r,Math.max(t,e)),H=async()=>{if(L)return L;if(!O){const e="/dev-sandbox/tools/silhouette/onnx/";O=Q(()=>import(`${e}ort.all.min.mjs`),[])}return L=await O,L},Z=async()=>{if(D)return;const e=await H(),t="/dev-sandbox/tools/silhouette/onnx/";e.env.wasm.wasmPaths=t,typeof globalThis<"u"&&globalThis.crossOriginIsolated&&typeof navigator<"u"&&typeof navigator.hardwareConcurrency=="number"?e.env.wasm.numThreads=Math.min(4,Math.max(1,navigator.hardwareConcurrency)):e.env.wasm.numThreads=1,D=!0},$=async()=>{if(B)return B;await Z(),M("Robust Video Matting を初期化しています…","pending");const e=await H(),t=`/dev-sandbox/tools/silhouette/${K}`;try{B=await e.InferenceSession.create(t,{executionProviders:["webgl","wasm"],graphOptimizationLevel:"all"})}catch(r){console.warn("[silhouette] WebGL EP unavailable, falling back to WASM only.",r),B=await e.InferenceSession.create(t,{executionProviders:["wasm"],graphOptimizationLevel:"all"})}return M("準備完了。画像を選択し「生成する」を押してください。","ready"),C(),B},tt=e=>"width"in e&&"height"in e?{width:e.width,height:e.height}:{width:e.naturalWidth,height:e.naturalHeight},et=async e=>{const t=await H(),{Tensor:r}=t,a=await $(),{width:n,height:o}=tt(e);if(n===0||o===0)throw new Error("入力画像のサイズが不正です");const s=document.createElement("canvas");s.width=n,s.height=o;const l=s.getContext("2d",{willReadFrequently:!0});if(!l)throw new Error("マット推論の前処理に失敗しました");l.drawImage(e,0,0,n,o);const d=l.getImageData(0,0,n,o).data,g=n*o,u=new Float32Array(g*3);for(let v=0;v<g;v+=1){const A=v*4;u[v]=d[A]/255,u[v+g]=d[A+1]/255,u[v+g*2]=d[A+2]/255}const m=new r("float32",u,[1,3,o,n]),h=Math.min(1,512/Math.min(n,o)),E=new r("float32",new Float32Array([h]),[1]),f=(v,A)=>{const Y=Math.max(1,Math.ceil(o*h/A)),T=Math.max(1,Math.ceil(n*h/A));return new r("float32",new Float32Array(v*Y*T),[1,v,Y,T])},R={src:m,r1i:f(16,2),r2i:f(20,4),r3i:f(40,8),r4i:f(64,16),downsample_ratio:E},I=(await a.run(R)).pha;if(!I)throw new Error("RVM の推論結果から alpha マスクを取得できませんでした");const F=I.dims,j=F[2]??o,q=F[3]??n;return{mask:I.data instanceof Float32Array?new Float32Array(I.data):Float32Array.from(I.data),width:q,height:j}},nt=async e=>new Promise((t,r)=>{const a=new FileReader;a.onerror=()=>r(new Error("画像の読み込みに失敗しました")),a.onload=()=>{const n=new Image;n.onload=()=>t(n),n.onerror=()=>r(new Error("画像の表示に失敗しました")),n.src=String(a.result)},a.readAsDataURL(e)}),ot=e=>{const t=e.replace("#",""),r=Number.parseInt(t.length===3?t.repeat(2):t,16);return{r:r>>16&255,g:r>>8&255,b:r&255}},at=1,U=1,rt=.75,st=e=>Math.min(1,Math.max(0,e)),it=(e,t,r,a)=>{const n=new Float32Array(e.length);for(let o=0;o<r;o+=1)for(let s=0;s<t;s+=1){let l=0,i=0;for(let d=-a;d<=a;d+=1){const g=o+d;if(g<0||g>=r)continue;const u=g*t;for(let m=-a;m<=a;m+=1){const h=s+m;h<0||h>=t||(l+=e[u+h],i+=1)}}n[o*t+s]=i>0?l/i:e[o*t+s]}return n},lt=(e,t,r,a)=>{const n=new Float32Array(e.length);for(let o=0;o<r;o+=1)for(let s=0;s<t;s+=1){let l=0;for(let i=-a;i<=a;i+=1){const d=o+i;if(d<0||d>=r)continue;const g=d*t;for(let u=-a;u<=a;u+=1){const m=s+u;if(m<0||m>=t)continue;const h=e[g+m];h>l&&(l=h)}}n[o*t+s]=l}return n},ct=(e,t,r,a)=>{const n=new Float32Array(e.length);for(let o=0;o<r;o+=1)for(let s=0;s<t;s+=1){let l=1;for(let i=-a;i<=a;i+=1){const d=o+i;if(d<0||d>=r)continue;const g=d*t;for(let u=-a;u<=a;u+=1){const m=s+u;if(m<0||m>=t)continue;const h=e[g+m];h<l&&(l=h)}}n[o*t+s]=l}return n},ut=(e,t,r)=>{const a=new Float32Array(e.length);for(let o=0;o<e.length;o+=1)a[o]=st(e[o])**rt;let n=a;{const o=lt(n,t,r,U),s=ct(o,t,r,U),l=new Float32Array(n.length);for(let i=0;i<n.length;i+=1)l[i]=Math.max(n[i],s[i]);n=l}return n=it(n,t,r,at),n},dt=(e,t,r)=>{let a=t,n=-1,o=r,s=-1;const l=.08;for(let h=0;h<r;h+=1){const E=h*t;for(let f=0;f<t;f+=1)e[E+f]>l&&(f<a&&(a=f),f>n&&(n=f),h<o&&(o=h),h>s&&(s=h))}if(n<a||s<o)return{x:0,y:0,width:t||1,height:r||1};const i=6,d=Math.max(0,a-i),g=Math.max(0,o-i),u=Math.min(t-1,n+i),m=Math.min(r-1,s+i);return{x:d,y:g,width:Math.max(1,u-d+1),height:Math.max(1,m-g+1)}},ht=(e,t,r,a)=>{const n=ut(e,t,r),{r:o,g:s,b:l}=ot(a.silhouetteColor),i=document.createElement("canvas");i.width=t,i.height=r;const d=i.getContext("2d",{willReadFrequently:!0});if(!d)throw new Error("マスク描画用コンテキストの初期化に失敗しました");const g=d.createImageData(t,r),u=g.data;for(let h=0;h<n.length;h+=1){const E=Math.min(255,Math.max(0,Math.round(n[h]*255))),f=h*4;u[f]=o,u[f+1]=s,u[f+2]=l,u[f+3]=E}d.putImageData(g,0,0);const m=dt(n,t,r);return{canvas:i,bounds:m}},mt=(e,t)=>{const r=t.text.replace(/\r/g,"").trim();if(!r)return;const a=r.split(`
+`).map(m=>[...m]);if(!a.length)return;const n=t.fontSize*.25,o=t.fontSize*.6,s=a.map(m=>m.length*t.fontSize+Math.max(0,m.length-1)*n),l=Math.max(...s),i=a.length*t.fontSize+Math.max(0,a.length-1)*o,d=t.outputWidth*y(t.textAnchorX,0,1,.5),g=t.outputHeight*y(t.textAnchorY,0,1,.5),u=d+i/2-t.fontSize/2;e.save(),e.textAlign="center",e.textBaseline="middle",e.lineJoin="round",e.lineCap="round",e.font=`${t.fontSize}px 'Noto Serif JP', 'Noto Sans JP', sans-serif`,e.lineWidth=t.strokeWidth,e.strokeStyle="rgba(0, 0, 0, 0.9)",e.fillStyle="#f8fafc",a.forEach((m,h)=>{const E=u-h*(t.fontSize+o),f=s[h]??l,R=g-f/2+t.fontSize/2;m.forEach((z,I)=>{const F=R+I*(t.fontSize+n);e.strokeText(z,E,F),e.fillText(z,E,F)})}),e.restore()},W=async()=>{if(!S)return;const e=c.previewCanvas;e.width=p.outputWidth,e.height=p.outputHeight;const t=e.getContext("2d");if(!t)throw new Error("出力用コンテキストの取得に失敗しました");t.imageSmoothingEnabled=!0,t.imageSmoothingQuality="high",p.backgroundMode==="transparent"?t.clearRect(0,0,e.width,e.height):(t.fillStyle=p.backgroundColor,t.fillRect(0,0,e.width,e.height));const{canvas:r,bounds:a}=S,n=a.width,o=a.height,s=Math.min(p.outputWidth/n,p.outputHeight/o),l=s<1?s:1,i=n*l,d=o*l,g=(p.outputWidth-i)/2,u=(p.outputHeight-d)/2;t.save(),t.filter="blur(1.4px)",t.imageSmoothingEnabled=!0,t.imageSmoothingQuality="high",t.drawImage(r,a.x,a.y,a.width,a.height,g,u,i,d),t.restore(),t.drawImage(r,a.x,a.y,a.width,a.height,g,u,i,d),mt(t,p),x&&(URL.revokeObjectURL(x),x=null),c.downloadButton.disabled=!0;const m=await new Promise(h=>e.toBlob(h,"image/png"));m&&(x=URL.createObjectURL(m),c.downloadButton.disabled=!1)},gt=async()=>{const e=b??k;if(!e){M("画像を選択してください。","error");return}p=X(),c.generateButton.disabled=!0,M("人物マットを推定中…","pending");try{const t=await et(e);S=ht(t.mask,t.width,t.height,p),await W(),M("生成完了。必要に応じてダウンロードしてください。","ready")}catch(t){console.error(t),M("生成中にエラーが発生しました。コンソールを確認してください。","error")}finally{C()}},ft=()=>{if(!x)return;const e=document.createElement("a");e.href=x,e.download="silhouette.png",e.click()},pt=e=>{if(!S)return;const t=c.previewCanvas.getBoundingClientRect();if(!t.width||!t.height)return;const r=y((e.clientX-t.left)/t.width,0,1,.5),a=y((e.clientY-t.top)/t.height,0,1,.5);p={...p,textAnchorX:r,textAnchorY:a},W().catch(n=>{console.error(n),M("プレビューの更新に失敗しました。コンソールを確認してください。","error")})},V=()=>{c.backgroundMode.value==="transparent"?c.backgroundColor.disabled=!0:c.backgroundColor.disabled=!1},bt=async()=>{var t;const e=(t=c.imageInput.files)==null?void 0:t[0];if(!e){if(k=null,b){try{b.close()}catch{}b=null}S=null,c.downloadButton.disabled=!0,P("画像を選択してください。","pending"),C();return}if(x&&(URL.revokeObjectURL(x),x=null),b){try{b.close()}catch{}b=null}S=null,c.downloadButton.disabled=!0,P("画像を読み込み中…","pending");try{k=await nt(e),typeof createImageBitmap=="function"?b=await createImageBitmap(k):b=null,P(`${k.width}×${k.height} の画像を読み込みました。`,"ready"),C()}catch(r){if(console.error(r),k=null,b){try{b.close()}catch{}b=null}P("画像の読み込みに失敗しました。別のファイルをお試しください。","error"),S=null,C()}},wt=()=>{c.imageInput.addEventListener("change",bt),c.backgroundMode.addEventListener("change",()=>{V(),p=X(),S&&W()}),[c.silhouetteColor,c.backgroundColor,c.textInput,c.fontSize,c.strokeWidth,c.outputWidth,c.outputHeight].forEach(e=>{e.addEventListener("input",()=>{p=X(),S&&W()})}),c.generateButton.addEventListener("click",()=>{gt().catch(e=>{console.error(e),M("生成中にエラーが発生しました。コンソールを確認してください。","error"),C()})}),c.downloadButton.addEventListener("click",ft),c.previewCanvas.addEventListener("pointerdown",pt)};wt();V();C();$().catch(e=>{console.error(e),M("Robust Video Matting の初期化に失敗しました。再読み込みしてください。","error")});
