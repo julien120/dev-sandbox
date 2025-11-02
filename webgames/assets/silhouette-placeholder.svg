@@ -1,0 +1,19 @@
+<svg width="640" height="360" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#3b4371"/>
+    </linearGradient>
+    <style>
+      .bg { fill: url(#bg); }
+      .body { fill: rgba(14, 90, 255, 0.9); }
+      .text { fill: #f8fafc; font-family: 'Noto Sans JP', sans-serif; font-weight: 700; }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="640" height="360" rx="32"/>
+  <g transform="translate(200 40)">
+    <path class="body" d="M120 40c0-22 18-40 40-40s40 18 40 40-18 40-40 40-40-18-40-40Zm-14 84c14-28 58-26 54 10l-8 78h-44l-8-78c-2-16 0-28 6-38Zm-70 54c24-12 54-4 68 26l28 60H22l-22-56c-8-20-2-26 16-30Zm196 0c-18 4-24 10-16 30l22 56h-60l28-60c14-30 44-38 68-26Z"/>
+  </g>
+  <text class="text" font-size="32" x="480" y="80" writing-mode="tb" glyph-orientation-vertical="auto">縦書き生成</text>
+</svg>

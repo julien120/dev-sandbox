@@ -1,5 +1,13 @@
 import './style.css';
-import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from 'd3-force';
+import {
+  forceCenter,
+  forceCollide,
+  forceLink,
+  forceManyBody,
+  forceSimulation,
+  type SimulationLinkDatum,
+  type SimulationNodeDatum,
+} from 'd3-force';
 import { Mecab, type MecabRawToken } from './mecab-client';
 
 type WordStat = {
@@ -35,6 +43,9 @@ type NetworkLink = {
   target: string;
   weight: number;
 };
+
+type NetworkNodeDatum = SimulationNodeDatum & Omit<NetworkNode, 'x' | 'y'>;
+type NetworkLinkDatum = SimulationLinkDatum<NetworkNodeDatum> & { weight: number };
 
 const STOPWORDS = new Set([
   'こと',
@@ -571,7 +582,7 @@ const generateCooccurrenceNetwork = () => {
   const selectedNodes = rankedNodes.filter((stat) => usedNodes.has(stat.base));
   const maxCount = selectedNodes[0]?.count ?? 1;
 
-  const simulationNodes = selectedNodes.map((stat, index) => ({
+  const simulationNodes: NetworkNodeDatum[] = selectedNodes.map((stat, index) => ({
     id: stat.base,
     label: stat.base,
     reading: stat.reading,
@@ -580,31 +591,40 @@ const generateCooccurrenceNetwork = () => {
     color: palette[index % palette.length],
   }));
 
-  const simulationLinks = links.map((link) => ({
+  const simulationLinks: NetworkLinkDatum[] = links.map((link) => ({
     source: link.source,
     target: link.target,
     weight: link.weight,
   }));
 
-  const simulation = forceSimulation(simulationNodes as any)
+  const simulation = forceSimulation<NetworkNodeDatum>(simulationNodes)
     .force(
       'link',
-      forceLink(simulationLinks)
-        .id((d: any) => d.id)
-        .distance((d) => 220 - Math.min(150, d.weight * 12))
+      forceLink<NetworkNodeDatum, NetworkLinkDatum>(simulationLinks)
+        .id((datum) => datum.id)
+        .distance((link) => 220 - Math.min(150, link.weight * 12))
         .strength(0.9),
     )
-    .force('charge', forceManyBody().strength(-320))
+    .force('charge', forceManyBody<NetworkNodeDatum>().strength(-320))
     .force('center', forceCenter(networkCanvas.width / 2, networkCanvas.height / 2))
-    .force('collide', forceCollide().radius((d: any) => d.radius + 16).strength(1));
+    .force('collide', forceCollide<NetworkNodeDatum>().radius((node) => node.radius + 16).strength(1));
 
   simulation.stop();
   for (let i = 0; i < 360; i += 1) {
     simulation.tick();
   }
 
-  networkNodes = simulationNodes as NetworkNode[];
-  networkLinks = simulationLinks.map((link: any) => ({
+  networkNodes = simulationNodes.map<NetworkNode>((node) => ({
+    id: node.id,
+    label: node.label,
+    reading: node.reading,
+    count: node.count,
+    radius: node.radius,
+    color: node.color,
+    x: typeof node.x === 'number' ? node.x : networkCanvas.width / 2,
+    y: typeof node.y === 'number' ? node.y : networkCanvas.height / 2,
+  }));
+  networkLinks = simulationLinks.map<NetworkLink>((link) => ({
     source: typeof link.source === 'string' ? link.source : link.source.id,
     target: typeof link.target === 'string' ? link.target : link.target.id,
     weight: link.weight,

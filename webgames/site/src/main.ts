@@ -10,6 +10,7 @@ import vjThumbnail from '../../assets/vj-placeholder.svg?url';
 import netliteracyThumbnail from '../../assets/netliteracy-placeholder.svg?url';
 import styleforgeThumbnail from '../../assets/styleforge-placeholder.svg?url';
 import ningenThumbnail from '../../assets/ningen-placeholder.svg?url';
+import silhouetteThumbnail from '../../assets/silhouette-placeholder.svg?url';
 
 type GameSummary = {
   slug: string;
@@ -108,6 +109,14 @@ const games: GameSummary[] = [
     description: '青空文庫「人間失格」をMeCabで解析し、頻出語からワードクラウドを生成・ダウンロードできます。',
     thumbnail: ningenThumbnail,
     controls: '「生成」ボタンでクラウド描画 → PNGを保存',
+  },
+  {
+    slug: 'silhouette',
+    url: '/dev-sandbox/tools/silhouette/',
+    title: '週刊誌のサムネイル生成',
+    description: 'MediaPipe Selfie Segmenter と Canvas 処理で人物を切り抜き、縦書きテキストを重ねて週刊誌風サムネを作成。',
+    thumbnail: silhouetteThumbnail,
+    controls: '画像アップロード → 色と文字を設定 → 生成＆ダウンロード',
   },
 ];
 

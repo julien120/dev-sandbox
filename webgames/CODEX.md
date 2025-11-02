@@ -54,6 +54,9 @@ node: 20
 - ningen: 『人間失格』全文を MeCab 解析し、頻出語からワードクラウドを生成・ダウンロードするツール。
   - 初回に `scripts/sync-assets.mjs` で MeCab WASM を同期し、`public/corpus/ningen.txt` に保存済みテキストを読み込む。
   - 閾値と最大語数を指定してクラウドを再描画、Canvas から PNG 保存が可能。
+- silhouette: MediaPipe Selfie Segmenter を用いて人物シルエットを抽出し、縦書きテキストを重ねた週刊誌風サムネイルを生成するツール。
+  - 画像アップロード→シルエット色／背景／縦書き文字／出力サイズを設定→PNG ダウンロードまでブラウザ内で完結。
+  - `predev`/`prebuild` で Selfie Segmenter の WASM と `.tflite` モデルを `public/mediapipe/` に同期し、Pages 配信に含める。
 
 ## 着手テンプレ（例）
 
