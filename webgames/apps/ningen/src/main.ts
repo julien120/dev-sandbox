@@ -422,7 +422,19 @@ const drawWordCloud = (placements: PlacedWord[]) => {
 };
 
 const handleDownload = () => {
-  canvas.toBlob((blob) => {
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = canvas.width;
+  exportCanvas.height = canvas.height;
+  const exportCtx = exportCanvas.getContext('2d');
+  const srcCtx = canvas.getContext('2d');
+  if (!exportCtx || !srcCtx) {
+    return;
+  }
+  exportCtx.fillStyle = '#ffffff';
+  exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+  exportCtx.drawImage(canvas, 0, 0);
+
+  exportCanvas.toBlob((blob) => {
     if (!blob) {
       return;
     }
