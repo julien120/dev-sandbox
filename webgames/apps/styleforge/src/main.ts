@@ -17,28 +17,25 @@ type Token = {
   isPunctuation: boolean;
 };
 
-const STYLE_OPTIONS: Array<{ value: Style; label: string; description: string }> = [
-  {
-    value: 'polite',
+const STYLE_INFO: Record<Style, { label: string; description: string }> = {
+  polite: {
     label: 'ですます調（フォーマル）',
     description: '丁寧な「です・ます」調に整えます。',
   },
-  {
-    value: 'plain',
+  plain: {
     label: 'である調（論文・解説向け）',
     description: '常体（だ・である調）の文体に変換します。',
   },
-  {
-    value: 'casual',
+  casual: {
     label: 'カジュアル（フレンドリー）',
     description: '砕けた親しみやすいトーンに寄せます。',
   },
-  {
-    value: 'business',
+  business: {
     label: 'ビジネスメール調',
     description: '敬語と丁寧語を強め、ビジネス向けの体裁に整えます。',
   },
-];
+};
+const STYLE_ORDER: Style[] = ['business', 'polite', 'plain', 'casual'];
 
 const PUNCTUATION = new Set(['。', '！', '!', '？', '?', '、', '，', '．', '…', '‥', '〜', '~']);
 const SENTENCE_BOUNDARY = new Set(['。', '！', '!', '？', '?', '…', '‥']);
@@ -66,13 +63,12 @@ app.innerHTML = `
       <textarea id="source-text" placeholder="例：本日は新しい機能のご案内をいたします。何かご不明点があればお知らせください。"></textarea>
     </article>
     <article class="card">
-      <label for="style-select">文体スタイル（b）</label>
-      <select id="style-select">
-        ${STYLE_OPTIONS.map(
-          (option) =>
-            `<option value="${option.value}">${option.label} — ${option.description}</option>`,
-        ).join('')}
-      </select>
+      <label for="style-text">目標文体の例文（b）</label>
+      <textarea
+        id="style-text"
+        placeholder="例：平素より大変お世話になっております。明朝までにご確認いただけますと幸いです。何卒よろしくお願いいたします。"
+      ></textarea>
+      <p class="status" id="style-status" data-state="pending">例文から文体を推定します。</p>
       <button id="convert-button" type="button" disabled>文体変換する</button>
       <p class="status" id="helper-status">MeCab の準備が整うとボタンが有効になります。</p>
     </article>
@@ -109,13 +105,24 @@ app.innerHTML = `
 const statusEl = document.querySelector<HTMLElement>('#engine-status');
 const helperStatusEl = document.querySelector<HTMLElement>('#helper-status');
 const inputEl = document.querySelector<HTMLTextAreaElement>('#source-text');
-const styleEl = document.querySelector<HTMLSelectElement>('#style-select');
+const styleSampleEl = document.querySelector<HTMLTextAreaElement>('#style-text');
+const styleStatusEl = document.querySelector<HTMLElement>('#style-status');
 const buttonEl = document.querySelector<HTMLButtonElement>('#convert-button');
 const outputEl = document.querySelector<HTMLDivElement>('#output-text');
 const analysisBodyEl = document.querySelector<HTMLTableSectionElement>('#analysis-body');
 const analysisCountEl = document.querySelector<HTMLSpanElement>('#analysis-count');
 
-if (!statusEl || !helperStatusEl || !inputEl || !styleEl || !buttonEl || !outputEl || !analysisBodyEl || !analysisCountEl) {
+if (
+  !statusEl ||
+  !helperStatusEl ||
+  !inputEl ||
+  !styleSampleEl ||
+  !styleStatusEl ||
+  !buttonEl ||
+  !outputEl ||
+  !analysisBodyEl ||
+  !analysisCountEl
+) {
   throw new Error('必要なDOM要素の構築に失敗しました');
 }
 
@@ -148,17 +155,17 @@ const ensureMecab = async () => {
 
 const updateButtonState = () => {
   const hasText = inputEl.value.trim().length > 0;
-  buttonEl.disabled = !mecabReady || mecabLoadError || !hasText;
+  const hasStyle = styleSampleEl.value.trim().length > 0;
+  buttonEl.disabled = !mecabReady || mecabLoadError || !hasText || !hasStyle;
 };
 
 inputEl.addEventListener('input', () => {
   updateButtonState();
 });
 
-styleEl.addEventListener('change', () => {
-  if (!buttonEl.disabled && inputEl.value.trim()) {
-    void transformText();
-  }
+styleSampleEl.addEventListener('input', () => {
+  updateButtonState();
+  void previewStyle();
 });
 
 buttonEl.addEventListener('click', () => {
@@ -392,6 +399,149 @@ const transformTokens = (tokens: Token[], style: Style): string => {
   return sentences.map((sentence) => handler[style as Exclude<Style, 'business'>](sentence)).join('');
 };
 
+const STYLE_KEYWORDS: Record<Style, string[]> = {
+  business: [
+    'お世話になっております',
+    'お世話になります',
+    '何卒',
+    'よろしくお願いいたします',
+    'ご確認ください',
+    'ご対応ください',
+    'ご査収',
+    'ご連絡ください',
+    '恐縮ですが',
+    '恐れ入りますが',
+    '敬具',
+  ],
+  polite: ['です', 'ます', 'でした', 'ください', 'おります'],
+  plain: ['である', 'だ。', 'だった', 'だろう', 'と思う'],
+  casual: ['だよ', 'だね', 'かな', 'ね！', 'ね？', 'よ！', '笑', 'w'],
+};
+
+const inferStyle = (tokens: Token[], rawText: string): { style: Style; scores: Record<Style, number> } => {
+  const scores: Record<Style, number> = {
+    polite: 0,
+    plain: 0,
+    casual: 0,
+    business: 0,
+  };
+
+  const normalized = rawText.replace(/\s+/g, '');
+  STYLE_ORDER.forEach((style) => {
+    STYLE_KEYWORDS[style].forEach((keyword) => {
+      if (normalized.includes(keyword)) {
+        scores[style] += style === 'business' ? 6 : 3;
+      }
+    });
+  });
+
+  let verbCount = 0;
+  let masuCount = 0;
+  let desuCount = 0;
+  let daCount = 0;
+
+  tokens.forEach((token, index) => {
+    if (token.pos === '動詞') {
+      verbCount += 1;
+    }
+    if (token.surface.endsWith('ます')) {
+      masuCount += 1;
+      scores.polite += 2;
+      scores.business += 1;
+    }
+    if (token.surface === 'です') {
+      desuCount += 1;
+      scores.polite += 2;
+      scores.business += 1;
+    }
+    if (token.surface === 'でございます' || token.surface === 'ございます') {
+      scores.business += 4;
+    }
+    if (token.surface === 'だ' || token.base === 'だ') {
+      daCount += 1;
+      scores.plain += 2;
+    }
+    if (token.surface === 'である') {
+      scores.plain += 3;
+    }
+    if (token.surface === 'よ' || token.surface === 'ね') {
+      // 助詞の「よ」「ね」が文末に位置する場合はカジュアル度を加点
+      if (index === tokens.length - 1 || tokens[index + 1].isPunctuation) {
+        scores.casual += 2;
+      } else {
+        scores.casual += 1;
+      }
+    }
+  });
+
+  if (verbCount > 0) {
+    const masuRatio = masuCount / verbCount;
+    if (masuRatio > 0.6) {
+      scores.polite += 4;
+      scores.business += 2;
+    } else if (masuRatio < 0.2 && daCount / verbCount > 0.1) {
+      scores.plain += 3;
+    }
+  }
+
+  if (desuCount > masuCount && desuCount > 0) {
+    scores.polite += 1;
+  }
+
+  if (/\p{Emoji}/u.test(normalized) || /[！!？?]{2,}/u.test(normalized)) {
+    scores.casual += 2;
+  }
+
+  const bestScore = Math.max(...STYLE_ORDER.map((style) => scores[style]));
+  if (bestScore <= 0) {
+    return { style: 'polite', scores };
+  }
+  const candidates = STYLE_ORDER.filter((style) => scores[style] === bestScore);
+  const style = (candidates[0] ?? 'polite') as Style;
+  return { style, scores };
+};
+
+const formatStyleMessage = (style: Style, scores: Record<Style, number>) => {
+  const sorted = [...STYLE_ORDER]
+    .sort((a, b) => scores[b] - scores[a])
+    .map((s) => `${STYLE_INFO[s].label.split('（')[0]}: ${scores[s]}`);
+  return `推定: ${STYLE_INFO[style].label}（${sorted.join(' / ')}）`;
+};
+
+const inferStyleFromSample = async (sample: string) => {
+  const normalized = sample.replace(/\r\n/g, '\n').trim();
+  if (!normalized) {
+    throw new Error('例文が空です');
+  }
+  await ensureMecab();
+  const rawTokens = Mecab.query(normalized);
+  const tokens = buildTokens(rawTokens);
+  if (!tokens.length) {
+    throw new Error('例文の解析に失敗しました');
+  }
+  return { tokens, ...inferStyle(tokens, normalized) };
+};
+
+const previewStyle = async (): Promise<Style | null> => {
+  const sample = styleSampleEl.value.trim();
+  if (!sample) {
+    styleStatusEl.dataset.state = 'pending';
+    styleStatusEl.textContent = '例文から文体を推定します。';
+    return null;
+  }
+  try {
+    const { style, scores } = await inferStyleFromSample(sample);
+    styleStatusEl.dataset.state = 'ready';
+    styleStatusEl.textContent = formatStyleMessage(style, scores);
+    return style;
+  } catch (error) {
+    styleStatusEl.dataset.state = 'error';
+    styleStatusEl.textContent = '文体の推定に失敗しました。例文を見直してください。';
+    console.error(error);
+    return null;
+  }
+};
+
 const transformText = async () => {
   const text = inputEl.value.trim();
   if (!text) {
@@ -411,10 +561,21 @@ const transformText = async () => {
     if (!mecabReady) {
       return;
     }
+
+    const sample = styleSampleEl.value.trim();
+    if (!sample) {
+      styleStatusEl.dataset.state = 'error';
+      styleStatusEl.textContent = '目標文体の例文を入力してください。';
+      return;
+    }
+
+    const { style: targetStyle, scores } = await inferStyleFromSample(sample);
+    styleStatusEl.dataset.state = 'ready';
+    styleStatusEl.textContent = formatStyleMessage(targetStyle, scores);
+
     const rawTokens = Mecab.query(text.replace(/\r\n/g, '\n'));
     const tokens = buildTokens(rawTokens);
-    const style = styleEl.value as Style;
-    const transformed = transformTokens(tokens, style);
+    const transformed = transformTokens(tokens, targetStyle);
     outputEl.textContent = transformed || '（出力できる内容がありませんでした）';
     renderAnalysis(tokens);
   } catch (error) {
@@ -439,4 +600,9 @@ inputEl.value = [
   '来週の勉強会について、資料の最終確認をお願いいたします。',
   'ご不明点があればお気軽にご連絡ください。',
 ].join('\n');
+styleSampleEl.value = [
+  '平素より大変お世話になっております。',
+  '取り急ぎ、ご確認のほどよろしくお願いいたします。',
+].join('\n');
 updateButtonState();
+void previewStyle();

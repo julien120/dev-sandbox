@@ -9,6 +9,7 @@ import ramenThumbnail from '../../assets/ramen-placeholder.svg?url';
 import vjThumbnail from '../../assets/vj-placeholder.svg?url';
 import netliteracyThumbnail from '../../assets/netliteracy-placeholder.svg?url';
 import styleforgeThumbnail from '../../assets/styleforge-placeholder.svg?url';
+import ningenThumbnail from '../../assets/ningen-placeholder.svg?url';
 const games = [
     {
         slug: 'flappy',
@@ -89,6 +90,14 @@ const games = [
         description: '文章をMeCabで解析し、選んだ文体に合わせてリライトするモダンなテキストツール。',
         thumbnail: styleforgeThumbnail,
         controls: '文章を入力 → 文体を選択 → 変換結果と形態素解析を確認',
+    },
+    {
+        slug: 'ningen',
+        url: '/dev-sandbox/tools/ningen/',
+        title: '人間失格ワードクラウドラボ',
+        description: '青空文庫「人間失格」をMeCabで解析し、頻出語からワードクラウドを生成・ダウンロードできます。',
+        thumbnail: ningenThumbnail,
+        controls: '「生成」ボタンでクラウド描画 → PNGを保存',
     },
 ];
 const app = document.querySelector('#app');
