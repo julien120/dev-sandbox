@@ -236,9 +236,21 @@ const resetPreview = (): void => {
   setStatus('動画ファイルを読み込んでください。');
 };
 
-const handleFile = (file: File): void => {
+const validateVideoFile = (file: File): boolean => {
+  if (file.size > MAX_SIZE_BYTES) {
+    const maxSizeMb = (MAX_SIZE_BYTES / (1024 * 1024)).toFixed(0);
+    setStatus(`ファイルサイズが大きすぎます。${maxSizeMb}MB 以下の動画を選択してください。`, true);
+    return false;
+  }
   if (!file.type.startsWith('video/')) {
     setStatus('対応していないファイル形式です。動画ファイルを選択してください。', true);
+    return false;
+  }
+  return true;
+};
+
+const handleFile = (file: File): void => {
+  if (!validateVideoFile(file)) {
     return;
   }
   currentFile = file;
