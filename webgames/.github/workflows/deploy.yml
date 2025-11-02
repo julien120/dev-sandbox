@@ -32,7 +32,9 @@ jobs:
         run: npm ci
 
       - name: Build workspaces
-        run: npm run build
+        run: |
+          npm run build
+          npm --workspace apps/silhouette run build
 
       - name: Assemble Pages artifact
         run: |
