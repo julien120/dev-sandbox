@@ -604,7 +604,11 @@ const generateCooccurrenceNetwork = () => {
   }
 
   networkNodes = simulationNodes as NetworkNode[];
-  networkLinks = simulationLinks;
+  networkLinks = simulationLinks.map((link: any) => ({
+    source: typeof link.source === 'string' ? link.source : link.source.id,
+    target: typeof link.target === 'string' ? link.target : link.target.id,
+    weight: link.weight,
+  }));
   drawCooccurrenceNetwork();
   networkStatusEl.dataset.state = 'ready';
   networkStatusEl.textContent = `生成済み：ノード ${networkNodes.length} 件／エッジ ${networkLinks.length} 本${
@@ -715,7 +719,7 @@ const handleCloudPointer = (event: MouseEvent) => {
       y <= word.y + word.height,
   );
   if (match) {
-    cloudLegendEl.textContent = `${match.stat.base}（${match.stat.reading}）: ${match.stat.count} 回`;
+      cloudLegendEl.textContent = `${match.stat.base}（${match.stat.reading}）: ${match.stat.count} 回`;
   } else if (event.type === 'mousemove') {
     cloudLegendEl.textContent = '';
   }
