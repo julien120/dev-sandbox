@@ -30,6 +30,7 @@ jobs:
           npm --workspace apps/suika run build
           npm --workspace apps/emotion run build
           npm --workspace apps/gifmaker run build
+          npm --workspace apps/silhouette run build
           npm --workspace apps/ramen run build
           npm --workspace apps/vj run build
           npm --workspace apps/netliteracy run build
@@ -57,7 +58,7 @@ jobs:
               echo "WARN: dist/$game is missing (check $game build)"
             fi
           done
-          for tool in gifmaker ramen vj netliteracy styleforge ningen; do
+          for tool in gifmaker silhouette ramen vj netliteracy styleforge ningen; do
             if [ -d "dist/$tool" ]; then
               mkdir -p "_site/tools/$tool"
               cp -r "dist/$tool"/. "_site/tools/$tool"
