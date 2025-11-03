@@ -9,7 +9,7 @@ import {
   circlesIntersect,
   lerp,
 } from '@engine';
-import { PlayerTracker, type TrackedPlayer } from './tracker';
+import { PlayerTracker, type BodyJointId, type TrackedPlayer } from './tracker';
 import { formatInteger } from './utils';
 import { SfxSynth } from './sfx';
 import './style.css';
@@ -31,6 +31,24 @@ const COUNTDOWN_SEQUENCE = ['3', '2', '1', 'GO!'] as const;
 const HUD_PADDING = 24;
 
 type CountdownLabel = (typeof COUNTDOWN_SEQUENCE)[number];
+
+const SKELETON_SEGMENTS: [BodyJointId, BodyJointId][] = [
+  ['head', 'torso'],
+  ['torso', 'leftShoulder'],
+  ['torso', 'rightShoulder'],
+  ['leftShoulder', 'rightShoulder'],
+  ['torso', 'leftHip'],
+  ['torso', 'rightHip'],
+  ['leftHip', 'rightHip'],
+  ['leftShoulder', 'leftElbow'],
+  ['leftElbow', 'leftWrist'],
+  ['rightShoulder', 'rightElbow'],
+  ['rightElbow', 'rightWrist'],
+  ['leftHip', 'leftKnee'],
+  ['leftKnee', 'leftAnkle'],
+  ['rightHip', 'rightKnee'],
+  ['rightKnee', 'rightAnkle'],
+];
 
 enum Phase {
   Splash = 'splash',
@@ -428,15 +446,17 @@ export class DvdDodgeScene extends Scene {
 
     const collectedIds = new Set<number>();
     for (const player of this.players) {
-      for (const coin of this.coins) {
-        if (collectedIds.has(coin.id)) {
-          continue;
-        }
-        const playerCircle = { position: player.position, radius: player.radius };
-        const coinCircle = { position: coin.position, radius: COIN_RADIUS };
-        if (circlesIntersect(playerCircle, coinCircle)) {
-          collectedIds.add(coin.id);
-          this.handleCoinCollection(coin);
+      for (const collider of player.colliders) {
+        for (const coin of this.coins) {
+          if (collectedIds.has(coin.id)) {
+            continue;
+          }
+          const playerCircle = { position: collider.position, radius: collider.radius };
+          const coinCircle = { position: coin.position, radius: COIN_RADIUS };
+          if (circlesIntersect(playerCircle, coinCircle)) {
+            collectedIds.add(coin.id);
+            this.handleCoinCollection(coin);
+          }
         }
       }
     }
@@ -467,10 +487,11 @@ export class DvdDodgeScene extends Scene {
 
   private checkCollisionWithPlayers(): boolean {
     const dvdRect = { position: this.dvd.position, size: DVD_SIZE };
-    return this.players.some((player) => {
-      const circle = { position: player.position, radius: player.radius };
-      return rectCircleIntersect(dvdRect, circle);
-    });
+    return this.players.some((player) =>
+      player.colliders.some((collider) =>
+        rectCircleIntersect(dvdRect, { position: collider.position, radius: collider.radius }),
+      ),
+    );
   }
 
   private triggerGameOver(): void {
@@ -599,34 +620,71 @@ export class DvdDodgeScene extends Scene {
   }
 
   private renderPlayers(ctx: CanvasRenderingContext2D): void {
+    const now = performance.now();
     this.players.forEach((player, index) => {
-      const pulse = 1 + Math.sin(performance.now() / 300 + index) * 0.04;
-      const radius = player.radius * pulse;
-      const gradient = ctx.createRadialGradient(
-        player.position.x,
-        player.position.y,
-        radius * 0.25,
-        player.position.x,
-        player.position.y,
-        radius,
-      );
-      gradient.addColorStop(0, 'rgba(129,212,250,0.9)');
-      gradient.addColorStop(1, 'rgba(2,119,189,0.4)');
+      if (player.colliders.length === 0) {
+        return;
+      }
+
+      const colliderMap = new Map(player.colliders.map((collider) => [collider.id, collider]));
 
       ctx.save();
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(player.position.x, player.position.y, radius, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.strokeStyle = 'rgba(129, 212, 250, 0.55)';
+      ctx.lineWidth = 6;
+      ctx.shadowColor = 'rgba(129, 212, 250, 0.4)';
+      ctx.shadowBlur = 18;
+      for (const [fromId, toId] of SKELETON_SEGMENTS) {
+        const from = colliderMap.get(fromId);
+        const to = colliderMap.get(toId);
+        if (!from || !to) {
+          continue;
+        }
+        ctx.beginPath();
+        ctx.moveTo(from.position.x, from.position.y);
+        ctx.lineTo(to.position.x, to.position.y);
+        ctx.stroke();
+      }
+      ctx.restore();
 
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'rgba(255,255,255,0.65)';
-      ctx.stroke();
+      player.colliders.forEach((collider) => {
+        const pulse = 1 + Math.sin(now / 320 + index * 0.6) * 0.05;
+        const radius = collider.radius * pulse;
+        ctx.save();
+        const gradient = ctx.createRadialGradient(
+          collider.position.x,
+          collider.position.y,
+          radius * 0.25,
+          collider.position.x,
+          collider.position.y,
+          radius,
+        );
+        gradient.addColorStop(0, 'rgba(255, 153, 255, 0.95)');
+        gradient.addColorStop(1, 'rgba(233, 30, 99, 0.35)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(collider.position.x, collider.position.y, radius, 0, Math.PI * 2);
+        ctx.fill();
 
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+        ctx.beginPath();
+        ctx.arc(collider.position.x, collider.position.y, radius * 0.6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      const torso = colliderMap.get('torso');
+      const head = colliderMap.get('head');
+      const anchor = torso ?? head ?? player.colliders[0];
+      if (!anchor) {
+        return;
+      }
+
+      ctx.save();
       ctx.font = '16px "Noto Sans JP", sans-serif';
       ctx.fillStyle = '#e1f5fe';
       ctx.textAlign = 'center';
-      ctx.fillText(`P${index + 1}`, player.position.x, player.position.y - radius - 12);
+      ctx.fillText(`P${index + 1}`, anchor.position.x, anchor.position.y - anchor.radius - 18);
       ctx.restore();
     });
   }
