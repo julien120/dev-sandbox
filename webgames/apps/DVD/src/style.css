@@ -1,0 +1,57 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: radial-gradient(circle at top, #071428, #02060d);
+  color: #f8fbff;
+  font-family: 'Noto Sans JP', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+main {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  gap: 1rem;
+  padding: 2rem 1rem;
+}
+
+#game-canvas {
+  width: min(960px, 90vw);
+  height: auto;
+  display: block;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 72px rgba(4, 20, 40, 0.45);
+  background: transparent;
+}
+
+#camera-stream {
+  position: absolute;
+  inset: auto auto 1rem 1rem;
+  width: 200px;
+  height: auto;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 32px rgba(0, 20, 40, 0.25);
+  transform-origin: center;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#camera-stream.is-visible {
+  opacity: 0.7;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}

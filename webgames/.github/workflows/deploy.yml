@@ -35,6 +35,7 @@ jobs:
         run: |
           npm run build
           npm --workspace apps/silhouette run build
+          npm --workspace apps/DVD run build
 
       - name: Assemble Pages artifact
         run: |
@@ -47,7 +48,7 @@ jobs:
           fi
 
           declare -a GAMES=(emotion flappy space suika tetris)
-          declare -a TOOLS=(gifmaker netliteracy ningen ramen silhouette styleforge vj)
+          declare -a TOOLS=(DVD gifmaker netliteracy ningen ramen silhouette styleforge vj)
 
           mkdir -p _site/games
           for app in "${GAMES[@]}"; do

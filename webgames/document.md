@@ -67,6 +67,7 @@ graph TD
 | `apps/styleforge`  | ツール         | `/dev-sandbox/tools/styleforge/`  | MeCab を用いた文体変換＆解析ツール。                             | `sync-assets.mjs` が `libmecab.wasm/.data` を `public/mecab/` に同期。辞書ファイルは約 53 MB と大きめ。 |
 | `apps/ningen`      | ツール         | `/dev-sandbox/tools/ningen/`      | 『人間失格』の頻出語を可視化するワードクラウドラボ。             | `public/corpus/ningen.txt` を参照し、`sync-assets.mjs` で MeCab WASM を同期。                           |
 | `apps/silhouette`  | ツール         | `/dev-sandbox/tools/silhouette/`  | 人物シルエットと縦書き文字を重ねたビジュアル生成ツール。         | MediaPipe Selfie Segmenter の WASM／モデルを `public/mediapipe/` へ同期。                               |
+| `apps/DVD`         | ツール         | `/dev-sandbox/tools/DVD/`         | Web カメラで身体を検出して遊ぶ DVD Dodge 体感アクション。        | Pose Landmarker の WASM／モデルを `public/mediapipe/` へ同期するスクリプトを実装。                     |
 
 ## アセット同期スクリプト
 
@@ -79,6 +80,7 @@ graph TD
 | styleforge  | `node scripts/sync-assets.mjs`           | MeCab WASM (`libmecab.wasm/.data`)                     | `public/mecab/` に同期、dev/build 前に自動実行。            |
 | ningen      | `node scripts/sync-assets.mjs`           | MeCab WASM (`libmecab.wasm/.data`)                     | `public/mecab/` に同期、`public/corpus/ningen.txt` を参照。 |
 | silhouette  | `node scripts/sync-assets.mjs`           | MediaPipe Selfie Segmenter WASM／モデル                | `public/mediapipe/` に展開し、predev/prebuild で自動同期。  |
+| DVD         | `node scripts/sync-mediapipe-assets.mjs` | Pose Landmarker の WASM／`.task` モデル                | カメラベース操作用のポーズ検出をブラウザ内で提供。          |
 
 これらのスクリプトは `predev` / `prebuild` で連携済み。新しい外部アセットを追加する際は同様の仕組みを採用すると安全です。
 
