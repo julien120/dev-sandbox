@@ -46,15 +46,18 @@ jobs:
             rsync -am --delete dist/site/ _site/
           fi
 
+          declare -a GAMES=(emotion flappy space suika tetris)
+          declare -a TOOLS=(gifmaker netliteracy ningen ramen silhouette styleforge vj)
+
           mkdir -p _site/games
-          for app in emotion flappy space suika tetris; do
+          for app in "${GAMES[@]}"; do
             if [ -d "dist/${app}" ]; then
               rsync -am --delete "dist/${app}/" "_site/games/${app}/"
             fi
           done
 
           mkdir -p _site/tools
-          for app in gifmaker netliteracy ningen ramen styleforge vj silhouette; do
+          for app in "${TOOLS[@]}"; do
             if [ -d "dist/${app}" ]; then
               rsync -am --delete "dist/${app}/" "_site/tools/${app}/"
             fi
