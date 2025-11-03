@@ -7,6 +7,7 @@
     <title>DVD Dodge</title>
   </head>
   <body>
+    <video id="camera-stream" autoplay playsinline muted aria-hidden="true"></video>
     <main>
       <h1 class="sr-only">DVD Dodge</h1>
       <canvas
@@ -17,7 +18,6 @@
         role="application"
         aria-label="DVD Dodge 体感アクションゲーム"
       ></canvas>
-      <video id="camera-stream" autoplay playsinline muted></video>
       <noscript>JavaScript を有効にしてゲームをプレイしてください。</noscript>
     </main>
     <script type="module" src="/src/main.ts"></script>
