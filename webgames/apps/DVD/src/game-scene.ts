@@ -505,16 +505,7 @@ export class DvdDodgeScene extends Scene {
   }
 
   private renderBackground(ctx: CanvasRenderingContext2D, width: number, height: number): void {
-    const hueBase = (this.dvd.hue + this.score * 0.01) % 1;
-    const topColor = new Color().setHSL(hueBase, 0.55, 0.18);
-    const bottomColor = new Color().setHSL((hueBase + 0.1) % 1, 0.75, 0.08);
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, topColor.getStyle());
-    gradient.addColorStop(1, bottomColor.getStyle());
-    ctx.save();
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
-    ctx.restore();
+    ctx.clearRect(0, 0, width, height);
   }
 
   private renderDvd(ctx: CanvasRenderingContext2D): void {
