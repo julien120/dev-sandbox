@@ -8,8 +8,18 @@ if (!canvas || !video) {
   throw new Error('必要な要素が見つかりません。');
 }
 
-const game = new Game(canvas, { background: '#040812' });
-game.renderer.resize(vec2(canvas.width, canvas.height));
+const game = new Game(canvas, { background: 'rgba(0, 0, 0, 0)' });
+
+const resizeCanvas = (): void => {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  canvas.width = width;
+  canvas.height = height;
+  game.renderer.resize(vec2(width, height));
+};
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 const scene = new DvdDodgeScene(video);
 game.setScene(scene);
