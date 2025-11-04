@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const projectRoot = resolve(__dirname, '../../..');
-const directLibDir = join(projectRoot, 'node_modules/mecab-wasm/lib');
+const directLibDir = join(projectRoot, 'node_modules', 'mecab-wasm', 'lib');
 const publicDir = resolve(__dirname, '../public');
 const targetDir = join(publicDir, 'mecab');
 
@@ -24,28 +24,58 @@ const directoryExists = async (dir) => {
   }
 };
 
+const tryResolveFromNodeModules = async (nodeModulesDir) => {
+  if (!(await directoryExists(nodeModulesDir))) {
+    return null;
+  }
+
+  const entries = await readdir(nodeModulesDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.name === 'mecab-wasm' && (entry.isDirectory() || entry.isSymbolicLink())) {
+      const libDir = join(nodeModulesDir, entry.name, 'lib');
+      if (await directoryExists(libDir)) {
+        return libDir;
+      }
+    }
+
+    if (entry.name.startsWith('@') && (entry.isDirectory() || entry.isSymbolicLink())) {
+      const scopeDir = join(nodeModulesDir, entry.name);
+      try {
+        const scopedEntries = await readdir(scopeDir, { withFileTypes: true });
+        for (const scoped of scopedEntries) {
+          if (scoped.name === 'mecab-wasm' && (scoped.isDirectory() || scoped.isSymbolicLink())) {
+            const libDir = join(scopeDir, scoped.name, 'lib');
+            if (await directoryExists(libDir)) {
+              return libDir;
+            }
+          }
+        }
+      } catch {
+        // ignore scope read errors
+      }
+    }
+  }
+
+  return null;
+};
+
 const resolveMecabLibDir = async () => {
   if (await directoryExists(directLibDir)) {
     return directLibDir;
   }
 
-  const pnpmRoot = join(projectRoot, 'node_modules/.pnpm');
-  try {
-    const entries = await readdir(pnpmRoot, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-      if (!entry.name.startsWith('mecab-wasm@')) {
-        continue;
-      }
-      const candidate = join(pnpmRoot, entry.name, 'node_modules/mecab-wasm/lib');
-      if (await directoryExists(candidate)) {
-        return candidate;
-      }
+  const nodeModulesRoots = [
+    join(projectRoot, 'node_modules'),
+    join(projectRoot, '..', 'node_modules'),
+    join(projectRoot, 'apps', 'styleforge', 'node_modules'),
+    join(projectRoot, '..', '..', 'node_modules'),
+  ];
+
+  for (const root of nodeModulesRoots) {
+    const resolved = await tryResolveFromNodeModules(root);
+    if (resolved) {
+      return resolved;
     }
-  } catch {
-    // ignore, fall through
   }
 
   throw new Error(
