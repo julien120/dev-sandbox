@@ -13,7 +13,7 @@ const targetDir = join(publicDir, 'mecab');
 
 await mkdir(targetDir, { recursive: true });
 
-const assets = ['libmecab.wasm', 'libmecab.data'];
+const assets = ['libmecab.js', 'libmecab.wasm', 'libmecab.data'];
 
 const directoryExists = async (dir) => {
   try {

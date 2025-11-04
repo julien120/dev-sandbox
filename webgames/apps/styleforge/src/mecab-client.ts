@@ -1,5 +1,3 @@
-import LoadMecab from 'mecab-wasm/lib/libmecab.js';
-
 export type MecabRawToken = {
   word: string;
   pos: string;
@@ -13,34 +11,49 @@ export type MecabRawToken = {
   pronunciation?: string;
 };
 
-type MecabModule = Awaited<ReturnType<typeof LoadMecab>>;
+type MecabModule = {
+  ccall: (...args: any[]) => any;
+  _malloc: (size: number) => number;
+  _free: (ptr: number) => void;
+  lengthBytesUTF8: (value: string) => number;
+  UTF8ToString: (pointer: number) => string;
+};
+
+type MecabLoader = (options: Record<string, unknown>) => Promise<MecabModule>;
 
 let mecabModule: MecabModule | null = null;
 let mecabInstance: number | null = null;
+let mecabLoaderPromise: Promise<MecabModule> | null = null;
 
 const getAssetBase = () => {
   const baseUrl = import.meta.env.BASE_URL ?? '/';
   return `${baseUrl}mecab/`;
 };
 
-const modulePromise = LoadMecab({
-  locateFile: (path: string) => {
-    const assetBase = getAssetBase();
-    if (path.endsWith('.wasm')) {
-      return `${assetBase}libmecab.wasm`;
-    }
-    if (path.endsWith('.data')) {
-      return `${assetBase}libmecab.data`;
-    }
-    return path;
-  },
-});
+const loadMecabModule = async (): Promise<MecabModule> => {
+  const assetBase = getAssetBase();
+  const loaderUrl = `${assetBase}libmecab.js`;
+  const module = await import(/* @vite-ignore */ loaderUrl);
+  const loader: MecabLoader = module.default ?? module;
+  return loader({
+    locateFile: (path: string) => {
+      if (path.endsWith('.wasm')) {
+        return `${assetBase}libmecab.wasm`;
+      }
+      if (path.endsWith('.data')) {
+        return `${assetBase}libmecab.data`;
+      }
+      return path;
+    },
+  });
+};
 
 const initialize = async () => {
   if (mecabModule) {
     return;
   }
-  mecabModule = await modulePromise;
+  mecabLoaderPromise ||= loadMecabModule();
+  mecabModule = await mecabLoaderPromise;
   mecabInstance = mecabModule.ccall('mecab_new2', 'number', ['string'], ['']);
   if (!mecabInstance) {
     throw new Error('MeCab インスタンスの初期化に失敗しました');
