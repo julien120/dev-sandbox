@@ -15,6 +15,6 @@
     "vite": "^5.0.0"
   },
   "dependencies": {
-    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304"
+    "@mediapipe/tasks-vision": "^0.10.21"
   }
 }
