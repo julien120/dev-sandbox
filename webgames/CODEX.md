@@ -18,8 +18,16 @@ node: 20
 - GitHub Pages の公開URLは `https://julien120.github.io/dev-sandbox/`。Actions/Pages のワークフローは必ずリポジトリ直下 `.github/workflows` に置き、Vite の `base` と `build.outDir` を `/dev-sandbox/…` に揃えること。
 - 画像/音源は暫定アセットで OK。必ず差し替え前提の抽象化を行う（`assets/`参照）。
 - 新しいゲームを追加するときは、このドキュメントの該当セクションのみを更新し、ほかのゲームの記述を崩さないこと。
-- 新しいゲーム/ツールを追加したら、`.github/workflows/deploy.yml` で該当アプリの `npm --workspace apps/<name> run build` と `_site/games/<name>` / `_site/tools/<name>` へのコピー処理を忘れずに追加すること。
+- 新しいゲーム/ツールを追加したら、`site/src/catalog.json` を更新し、`scripts/collect-app-lists.mjs` に検出されるようにする（Deploy ワークフローは catalog を唯一のソースとして `_site/games|tools/<distDir>` を組み立てる）。
 - バグ修正の時は何が問題だったか分析結果を記述してから実装に移ること
+
+## GitHub Pages デプロイ（404 防止の指針）
+
+- **必ずリポジトリ直下 (`/dev-sandbox/.github/workflows/deploy.yml`) のワークフローだけを編集**する。`webgames/.github/...` にファイルを足しても Actions は実行されず、ツールが `dist` / `_site` に含まれないまま 404 になる。
+- 新しいゲーム/ツールを追加したら、`site/src/catalog.json` の `category` / `distDir` / `url` / `thumbnailKey` を更新し、`distDir` と Vite `build.outDir`（例: `../../dist/DVD`）が一致しているか確認する。`scripts/collect-app-lists.mjs` は catalog を参照して `_site/games|tools/<distDir>` を組み立てるので、ここがズレると確実に 404 になる。
+- `npm run build` を実行すると monorepo 全体をビルドし、続けて `Deploy` ワークフローが `node scripts/collect-app-lists.mjs` と `rsync` で `_site` へ集約する。個別ワークスペースだけビルドして push しないこと。
+- ローカルで `_site/tools/<distDir>/index.html`（または `_site/games/...`）が生成されているかを push 前に毎回チェックすると、Pages 公開時の 404 を事前に検知できる。
+- `vite.config.ts` の `base` は必ず `/dev-sandbox/tools/<distDir>/` もしくは `/dev-sandbox/games/<distDir>/` に合わせ、Pages 上でのアセットパス崩れを防ぐ。
 
 ## 出力物（PR に必須）
 
