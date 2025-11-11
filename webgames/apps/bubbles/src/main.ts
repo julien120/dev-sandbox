@@ -18,11 +18,7 @@ main.innerHTML = `
       <button type="button" data-refetch>最新の投稿をもう一度読む</button>
     </div>
     <section class="bubble-field" aria-label="投稿一覧" aria-live="polite"></section>
-    <footer>
-      <p>
-        Sheet ID とシート名はクエリ（<code>?sheetId=xxx&sheetName=Sheet1</code>）または <code>VITE_SHEET_ID</code> / <code>VITE_SHEET_NAME</code> で設定できます。
-      </p>
-    </footer>
+    <footer></footer>
   </main>
 `;
 
@@ -59,6 +55,8 @@ const endpoint = hasSheetConfig
   : '';
 
 let controller: AbortController | null = null;
+let refreshTimer: number | null = null;
+const REFRESH_INTERVAL_MS = 30_000;
 
 const parseGviz = (payload: string): string[] => {
   const trimmed = payload
@@ -158,3 +156,14 @@ refetchButton.addEventListener('click', () => {
 });
 
 fetchMessages();
+
+const startAutoRefresh = () => {
+  if (refreshTimer) {
+    window.clearInterval(refreshTimer);
+  }
+  refreshTimer = window.setInterval(() => {
+    fetchMessages();
+  }, REFRESH_INTERVAL_MS);
+};
+
+startAutoRefresh();
