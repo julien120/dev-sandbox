@@ -6,7 +6,7 @@ if (!main) {
   throw new Error('#app not found');
 }
 
-const heroCopy = '今日、来たこと人に聞いています。\n最近面白かった映画は？';
+const heroCopy = '今日、文フリに来た人に聞いています。\n最近面白かった映画は？';
 const DEFAULT_SHEET_ID = '11JgSoPOSSSDd8j89quU6MhCfjrUQhoaTyaUB0rCYcWc';
 const DEFAULT_SHEET_NAME = 'Sheet1';
 
