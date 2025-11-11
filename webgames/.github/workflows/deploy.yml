@@ -37,6 +37,11 @@ jobs:
           npm --workspace apps/silhouette run build
           npm --workspace apps/DVD run build
 
+      - name: Collect app lists
+        id: catalog
+        run: |
+          node ./scripts/collect-app-lists.mjs | tee -a "$GITHUB_OUTPUT"
+
       - name: Assemble Pages artifact
         run: |
           set -euo pipefail
@@ -47,8 +52,8 @@ jobs:
             rsync -am --delete dist/site/ _site/
           fi
 
-          declare -a GAMES=(emotion flappy space suika tetris)
-          declare -a TOOLS=(DVD gifmaker netliteracy ningen ramen silhouette styleforge vj)
+          read -r -a GAMES <<< "${{ steps.catalog.outputs.games }}"
+          read -r -a TOOLS <<< "${{ steps.catalog.outputs.tools }}"
 
           mkdir -p _site/games
           for app in "${GAMES[@]}"; do
