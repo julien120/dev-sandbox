@@ -1,0 +1,142 @@
+:root {
+  color: #2f2a2a;
+  font-family: 'Zen Maru Gothic', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at top, #fff7fb 0%, #fefeff 45%, #f0f5ff 100%);
+  min-height: 100vh;
+  --bubble-min: 120px;
+  --bubble-max: 240px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #fff7fb 0%, #fefeff 45%, #f0f5ff 100%);
+}
+
+main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(24px, 4vw, 48px);
+  gap: 32px;
+  width: 100%;
+}
+
+.hero-copy {
+  text-align: center;
+  font-family: 'Yomogi', 'Zen Maru Gothic', cursive;
+  font-size: clamp(20px, 3vw, 32px);
+  line-height: 1.7;
+  white-space: pre-line;
+  color: #3a2f2f;
+}
+
+.info-bar {
+  font-size: 14px;
+  color: #5c5a67;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.info-bar button {
+  border: none;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(109, 136, 205, 0.2);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.info-bar button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(109, 136, 205, 0.3);
+}
+
+.bubble-field {
+  position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: clamp(420px, 70vh, 960px);
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.65);
+  overflow: hidden;
+  padding: clamp(16px, 4vw, 40px);
+  box-shadow: inset 0 0 60px rgba(255, 255, 255, 0.8), 0 30px 80px rgba(91, 134, 229, 0.15);
+}
+
+.bubble {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.95), rgba(255, 199, 231, 0.8));
+  color: #594848;
+  box-shadow: 0 12px 35px rgba(249, 153, 205, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  font-family: 'Zen Maru Gothic', 'Yomogi', cursive;
+  font-size: clamp(14px, 2vw, 20px);
+  line-height: 1.5;
+  max-width: 280px;
+  filter: drop-shadow(0 12px 20px rgba(192, 200, 255, 0.5));
+  animation: float var(--float-duration) ease-in-out infinite;
+  animation-delay: var(--float-delay);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+}
+
+.bubble::after {
+  content: '';
+  position: absolute;
+  width: 30%;
+  height: 35%;
+  top: 10%;
+  right: 15%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.65);
+  filter: blur(0.5px);
+}
+
+.bubble.ready {
+  opacity: 0.98;
+}
+
+@keyframes float {
+  0% {
+    transform: translate(var(--offset-x, -50%), var(--offset-y, -50%)) scale(0.9);
+  }
+  50% {
+    transform: translate(calc(var(--offset-x, -50%) + var(--drift, 40px)), calc(var(--offset-y, -50%) - 40px)) scale(1.02);
+  }
+  100% {
+    transform: translate(var(--offset-x, -50%), calc(var(--offset-y, -50%) - 20px)) scale(0.95);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+.status-message {
+  font-size: 15px;
+  color: #6b6176;
+}
+
+footer {
+  font-size: 12px;
+  color: #857e8b;
+}

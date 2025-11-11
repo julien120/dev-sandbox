@@ -68,6 +68,7 @@ graph TD
 | `apps/ningen`      | ツール         | `/dev-sandbox/tools/ningen/`      | 『人間失格』の頻出語を可視化するワードクラウドラボ。             | `public/corpus/ningen.txt` を参照し、`sync-assets.mjs` で MeCab WASM を同期。                           |
 | `apps/silhouette`  | ツール         | `/dev-sandbox/tools/silhouette/`  | 人物シルエットと縦書き文字を重ねたビジュアル生成ツール。         | MediaPipe Selfie Segmenter の WASM／モデルを `public/mediapipe/` へ同期。                               |
 | `apps/DVD`         | ツール         | `/dev-sandbox/tools/DVD/`         | Web カメラで身体を検出して遊ぶ DVD Dodge 体感アクション。        | Pose Landmarker の WASM／モデルを `public/mediapipe/` へ同期するスクリプトを実装。                     |
+| `apps/bubbles`     | ツール         | `/dev-sandbox/tools/bubbles/`     | Google スプレッドシート A 列のテキストがシャンボン玉のように浮遊。| シートID/シート名を env or クエリで設定。公開シート（GViz API）が必要。                                |
 
 ## アセット同期スクリプト
 

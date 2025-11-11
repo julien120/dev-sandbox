@@ -7,6 +7,7 @@ import suikaThumbnail from '../../assets/suika-placeholder.svg?url';
 import tetrisThumbnail from '../../assets/tetris-placeholder.svg?url';
 import gifmakerThumbnail from '../../assets/gifmaker-placeholder.svg?url';
 import dvdThumbnail from '../../assets/dvd-placeholder.svg?url';
+import bubblesThumbnail from '../../assets/bubbles-placeholder.svg?url';
 import ramenThumbnail from '../../assets/ramen-placeholder.svg?url';
 import vjThumbnail from '../../assets/vj-placeholder.svg?url';
 import netliteracyThumbnail from '../../assets/netliteracy-placeholder.svg?url';
@@ -22,6 +23,7 @@ const thumbnailMap = {
   tetris: tetrisThumbnail,
   gifmaker: gifmakerThumbnail,
   dvd: dvdThumbnail,
+  bubbles: bubblesThumbnail,
   ramen: ramenThumbnail,
   vj: vjThumbnail,
   netliteracy: netliteracyThumbnail,

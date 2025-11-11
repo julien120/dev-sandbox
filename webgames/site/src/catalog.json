@@ -70,6 +70,16 @@
     "thumbnailKey": "dvd"
   },
   {
+    "slug": "bubbles",
+    "category": "tool",
+    "distDir": "bubbles",
+    "url": "/dev-sandbox/tools/bubbles/",
+    "title": "シャンボン玉ボード",
+    "description": "Google スプレッドシートのA列メッセージがふわふわ浮かぶインスタレーション風ビューア。",
+    "controls": "シートIDとシート名を設定 → A列に投稿すると即座にバブル化",
+    "thumbnailKey": "bubbles"
+  },
+  {
     "slug": "ramen",
     "category": "tool",
     "distDir": "ramen",
