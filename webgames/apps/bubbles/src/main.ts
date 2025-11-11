@@ -13,20 +13,13 @@ const DEFAULT_SHEET_NAME = 'Sheet1';
 main.innerHTML = `
   <main>
     <p class="hero-copy">${heroCopy}</p>
-    <div class="info-bar" aria-live="polite">
-      <span class="status-message">Google スプレッドシートを読み込み中…</span>
-      <button type="button" data-refetch>最新の投稿をもう一度読む</button>
-    </div>
     <section class="bubble-field" aria-label="投稿一覧" aria-live="polite"></section>
-    <footer></footer>
   </main>
 `;
 
-const statusEl = main.querySelector<HTMLSpanElement>('.status-message');
 const bubbleField = main.querySelector<HTMLElement>('.bubble-field');
-const refetchButton = main.querySelector<HTMLButtonElement>('button[data-refetch]');
 
-if (!statusEl || !bubbleField || !refetchButton) {
+if (!bubbleField) {
   throw new Error('initial layout failed');
 }
 
@@ -56,7 +49,7 @@ const endpoint = hasSheetConfig
 
 let controller: AbortController | null = null;
 let refreshTimer: number | null = null;
-const REFRESH_INTERVAL_MS = 30_000;
+const REFRESH_INTERVAL_MS = 120_000;
 
 const parseGviz = (payload: string): string[] => {
   if (!payload.includes('setResponse')) {
@@ -83,49 +76,100 @@ const parseGviz = (payload: string): string[] => {
 
 const randomBetween = (min: number, max: number) => Math.random() * (max - min) + min;
 
-const renderBubbles = (messages: string[]) => {
-  bubbleField.innerHTML = '';
-  if (messages.length === 0) {
-    const empty = document.createElement('p');
-    empty.textContent = 'まだ投稿がありません。シートの A 列にメッセージを入れてみてください。';
-    bubbleField.appendChild(empty);
-    return;
-  }
+type BubbleEntry = {
+  key: string;
+  text: string;
+};
 
-  const bounds = bubbleField.getBoundingClientRect();
-  const width = bounds.width || bubbleField.clientWidth || 600;
-  const height = bounds.height || 480;
+const bubbleRegistry = new Map<string, HTMLDivElement>();
+const emptyState = document.createElement('p');
+emptyState.className = 'empty-state';
+emptyState.textContent = 'まだ投稿がありません。シートの A 列にメッセージを入れてみてください。';
 
-  messages.slice(0, 24).forEach((text, index) => {
-    const node = document.createElement('div');
-    node.className = 'bubble';
-    node.textContent = text;
+const createBubble = (text: string) => {
+  const node = document.createElement('div');
+  node.className = 'bubble';
+  node.textContent = text;
 
-    const size = randomBetween(120, 260);
-    const offsetX = randomBetween(size / 2, width - size / 2);
-    const offsetY = randomBetween(size / 2, height - size / 2);
-    const delay = randomBetween(0, 4);
-    const duration = randomBetween(9, 16);
-    const drift = randomBetween(-60, 60);
+  const width = window.innerWidth || bubbleField.clientWidth || 600;
+  const height = window.innerHeight || bubbleField.clientHeight || 480;
+  const margin = 80;
+  const size = randomBetween(120, 260);
+  const offsetX = randomBetween(margin, width - margin);
+  const offsetY = randomBetween(margin, height - margin);
+  const delay = randomBetween(0, 3);
+  const duration = randomBetween(12, 22);
+  const driftHorizontal = randomBetween(-60, 60);
+  const bob = randomBetween(30, 90);
 
-    node.style.setProperty('--float-delay', `${delay}s`);
-    node.style.setProperty('--float-duration', `${duration}s`);
-    node.style.setProperty('--offset-x', `${offsetX}px`);
-    node.style.setProperty('--offset-y', `${offsetY}px`);
-    node.style.setProperty('--drift', `${drift}px`);
-    node.style.width = `${size}px`;
-    node.style.height = `${size}px`;
+  node.style.setProperty('--float-delay', `${delay}s`);
+  node.style.setProperty('--float-duration', `${duration}s`);
+  node.style.setProperty('--drift-left', `${driftHorizontal}px`);
+  node.style.setProperty('--drift-right', `${-driftHorizontal}px`);
+  node.style.setProperty('--bob-up', `${-bob}px`);
+  node.style.setProperty('--bob-down', `${bob * 0.4}px`);
+  node.style.width = `${size}px`;
+  node.style.height = `${size}px`;
+  node.style.left = `${offsetX}px`;
+  node.style.top = `${offsetY}px`;
 
-    bubbleField.appendChild(node);
+  bubbleField.appendChild(node);
+  requestAnimationFrame(() => {
+    node.classList.add('ready');
+  });
+  return node;
+};
 
-    requestAnimationFrame(() => {
-      node.classList.add('ready');
-    });
+const keyMessages = (messages: string[]): BubbleEntry[] => {
+  const counts = new Map<string, number>();
+  return messages.slice(0, 24).map((text) => {
+    const normalized = text.trim();
+    const current = counts.get(normalized) ?? 0;
+    counts.set(normalized, current + 1);
+    return {
+      key: `${normalized}__${current}`,
+      text: normalized,
+    };
   });
 };
 
-const setStatus = (message: string) => {
-  statusEl.textContent = message;
+const syncBubbles = (messages: string[]) => {
+  const keyed = keyMessages(messages);
+
+  if (keyed.length === 0) {
+    bubbleRegistry.forEach((node, key) => {
+      node.classList.add('fade-out');
+      window.setTimeout(() => node.remove(), 800);
+      bubbleRegistry.delete(key);
+    });
+    if (!bubbleField.contains(emptyState)) {
+      bubbleField.appendChild(emptyState);
+    }
+    return;
+  }
+
+  if (bubbleField.contains(emptyState)) {
+    emptyState.remove();
+  }
+
+  const targetKeys = new Set<string>();
+
+  keyed.forEach(({ key, text }) => {
+    targetKeys.add(key);
+    if (!bubbleRegistry.has(key)) {
+      const bubble = createBubble(text);
+      bubble.dataset.key = key;
+      bubbleRegistry.set(key, bubble);
+    }
+  });
+
+  bubbleRegistry.forEach((node, key) => {
+    if (!targetKeys.has(key)) {
+      bubbleRegistry.delete(key);
+      node.classList.add('fade-out');
+      window.setTimeout(() => node.remove(), 900);
+    }
+  });
 };
 
 const fetchMessages = async () => {
@@ -133,13 +177,11 @@ const fetchMessages = async () => {
   controller = new AbortController();
 
   if (!hasSheetConfig) {
-    setStatus('Sheet ID が未設定のためサンプル文を表示しています。?sheetId= で指定できます。');
-    renderBubbles(fallbackMessages);
+    syncBubbles(fallbackMessages);
     return;
   }
 
   try {
-    setStatus('読み込み中…');
     const response = await fetch(endpoint, { signal: controller.signal });
     if (!response.ok) {
       throw new Error(`fetch failed: ${response.status}`);
@@ -147,23 +189,15 @@ const fetchMessages = async () => {
     const body = await response.text();
     const messages = parseGviz(body);
     if (messages.length === 0) {
-      setStatus('シートにテキストが見つからなかったためサンプル文を表示します。');
-      renderBubbles(fallbackMessages);
+      syncBubbles(fallbackMessages);
       return;
     }
-    renderBubbles(messages);
-    const lastUpdated = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    setStatus(`最新の投稿を ${lastUpdated} に取得しました。`);
+    syncBubbles(messages);
   } catch (error) {
     console.error('[bubbles] failed to fetch sheet', error);
-    setStatus('読み込みに失敗しました。ネットワークとシート公開設定をご確認ください。');
-    renderBubbles(fallbackMessages);
+    syncBubbles(fallbackMessages);
   }
 };
-
-refetchButton.addEventListener('click', () => {
-  fetchMessages();
-});
 
 fetchMessages();
 

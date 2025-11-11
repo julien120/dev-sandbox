@@ -45,33 +45,6 @@ main {
   box-shadow: 0 10px 30px rgba(255, 255, 255, 0.6);
 }
 
-.info-bar {
-  position: relative;
-  z-index: 2;
-  font-size: 14px;
-  color: #5c5a67;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.info-bar button {
-  border: none;
-  background: rgba(255, 255, 255, 0.8);
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-family: inherit;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(109, 136, 205, 0.2);
-  transition: transform 150ms ease, box-shadow 150ms ease;
-}
-
-.info-bar button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(109, 136, 205, 0.3);
-}
-
 .bubble-field {
   position: fixed;
   inset: 0;
@@ -84,7 +57,7 @@ main {
   pointer-events: none;
 }
 
-.bubble-field > p {
+.bubble-field .empty-state {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -102,6 +75,8 @@ main {
 
 .bubble {
   position: absolute;
+  left: 50%;
+  top: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -139,15 +114,21 @@ main {
   opacity: 0.98;
 }
 
+.bubble.fade-out {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.82);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
 @keyframes float {
   0% {
-    transform: translate(var(--offset-x, -50%), var(--offset-y, -50%)) scale(0.9);
+    transform: translate(-50%, -50%) translate3d(var(--drift-left, -6px), var(--bob-down, 24px), 0) scale(0.95);
   }
   50% {
-    transform: translate(calc(var(--offset-x, -50%) + var(--drift, 40px)), calc(var(--offset-y, -50%) - 40px)) scale(1.02);
+    transform: translate(-50%, -50%) translate3d(var(--drift-right, 6px), var(--bob-up, -60px), 0) scale(1.04);
   }
   100% {
-    transform: translate(var(--offset-x, -50%), calc(var(--offset-y, -50%) - 20px)) scale(0.95);
+    transform: translate(-50%, -50%) translate3d(var(--drift-left, -6px), var(--bob-down, 24px), 0) scale(0.95);
   }
 }
 
@@ -156,22 +137,4 @@ main {
     animation: none;
     opacity: 1;
   }
-}
-
-.status-message {
-  position: relative;
-  z-index: 2;
-  font-size: 15px;
-  color: #6b6176;
-}
-
-footer {
-  position: relative;
-  z-index: 2;
-  font-size: 12px;
-  color: #857e8b;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.55);
-  padding: 10px 20px;
-  border-radius: 999px;
 }

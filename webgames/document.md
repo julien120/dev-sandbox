@@ -104,6 +104,7 @@ sequenceDiagram
 
 - すべての Vite プロジェクトで `base` と `build.outDir` を `/dev-sandbox/...` に揃えているため、GitHub Pages のネストにも対応。
 - 各アプリ出力は `_site/games/<name>` または `_site/tools/<name>` に整理されます。新アプリを追加した際はワークフロー内のコピー処理を更新することを忘れないでください。
+- **lock ファイルの同期に注意**: `apps/bubbles` 追加時に `package-lock.json` のワークスペースリンク（`"node_modules/@webgames/bubbles": { "resolved": "apps/bubbles", "link": true }`）が抜けていたため、CI の `npm ci` が EUSAGE エラーで停止した事例があります。新規ワークスペースを追加したら、`package-lock.json` に該当リンクが生成されているか必ず確認してください。
 
 ## 開発ガイドライン（抜粋）
 

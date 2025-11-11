@@ -28,6 +28,7 @@ node: 20
 - `npm run build` を実行すると monorepo 全体をビルドし、続けて `Deploy` ワークフローが `node scripts/collect-app-lists.mjs` と `rsync` で `_site` へ集約する。個別ワークスペースだけビルドして push しないこと。
 - ローカルで `_site/tools/<distDir>/index.html`（または `_site/games/...`）が生成されているかを push 前に毎回チェックすると、Pages 公開時の 404 を事前に検知できる。
 - `vite.config.ts` の `base` は必ず `/dev-sandbox/tools/<distDir>/` もしくは `/dev-sandbox/games/<distDir>/` に合わせ、Pages 上でのアセットパス崩れを防ぐ。
+- 新しいワークスペースを追加したら、`package-lock.json` に `node_modules/@webgames/<name>` の `link: true` エントリが生成されているか必ず確認する。`apps/bubbles` 追加時にこのリンクが抜けており、CI の `npm ci` が EUSAGE（lock と package.json の不一致）で停止した事例がある。
 
 ## 出力物（PR に必須）
 
