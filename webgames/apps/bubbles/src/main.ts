@@ -59,10 +59,20 @@ let refreshTimer: number | null = null;
 const REFRESH_INTERVAL_MS = 30_000;
 
 const parseGviz = (payload: string): string[] => {
+  if (!payload.includes('setResponse')) {
+    throw new Error('gviz payload was not recognized');
+  }
+
   const trimmed = payload
-    .replace(/^.*setResponse\(/, '')
+    .replace(/^[\s\S]*?setResponse\(/, '')
     .replace(/\);\s*$/, '');
   const data = JSON.parse(trimmed);
+
+  if (data.status === 'error') {
+    const message = data.errors?.[0]?.detailed_message ?? data.errors?.[0]?.message;
+    throw new Error(message ?? 'gviz returned an error response');
+  }
+
   const rows = data.table?.rows ?? [];
   const texts = rows
     .map((row: any) => row.c?.[0]?.v)
