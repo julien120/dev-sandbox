@@ -69,6 +69,7 @@ graph TD
 | `apps/silhouette`  | ツール         | `/dev-sandbox/tools/silhouette/`  | 人物シルエットと縦書き文字を重ねたビジュアル生成ツール。         | MediaPipe Selfie Segmenter の WASM／モデルを `public/mediapipe/` へ同期。                               |
 | `apps/DVD`         | ツール         | `/dev-sandbox/tools/DVD/`         | Web カメラで身体を検出して遊ぶ DVD Dodge 体感アクション。        | Pose Landmarker の WASM／モデルを `public/mediapipe/` へ同期するスクリプトを実装。                     |
 | `apps/bubbles`     | ツール         | `/dev-sandbox/tools/bubbles/`     | Google スプレッドシート A 列のテキストがシャンボン玉のように浮遊。| シートID/シート名を env or クエリで設定。公開シート（GViz API）が必要。                                |
+| `apps/precure`     | ツール         | `/dev-sandbox/tools/precure/`     | プリキュアOP歌詞の感情構造をネットワークで比較可視化。            | D3風の力学レイアウト（独自実装）とSVG/PNGエクスポート機能を備えた可視化ツール。                       |
 
 ## アセット同期スクリプト
 

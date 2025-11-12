@@ -80,6 +80,16 @@
     "thumbnailKey": "bubbles"
   },
   {
+    "slug": "precure",
+    "category": "tool",
+    "distDir": "precure",
+    "url": "/dev-sandbox/tools/precure/",
+    "title": "Precure Emotion Atlas",
+    "description": "2020–2025 プリキュアOP歌詞の感情構造をネットワークで比較できる可視化ツール。",
+    "controls": "左右の年代を選択 → 感情名で検索 → SVG/PNGエクスポート",
+    "thumbnailKey": "precure"
+  },
+  {
     "slug": "ramen",
     "category": "tool",
     "distDir": "ramen",

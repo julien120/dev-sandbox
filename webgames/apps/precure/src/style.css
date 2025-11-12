@@ -1,0 +1,384 @@
+:root {
+  color: #1d1c28;
+  font-family: 'Zen Kaku Gothic New', 'Murecho', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  background: radial-gradient(circle at top, #ffe8f5 0%, #f7fbff 45%, #f0f4ff 100%);
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: transparent;
+}
+
+#app {
+  max-width: min(1180px, 92vw);
+  margin: 0 auto;
+  padding: 20px clamp(12px, 3vw, 32px) 48px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+header h1 {
+  margin: 6px 0;
+  font-size: clamp(32px, 5vw, 48px);
+}
+
+header p {
+  margin: 2px auto;
+  max-width: 760px;
+  line-height: 1.7;
+}
+
+.eyebrow {
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #ff88c7;
+  font-weight: 600;
+}
+
+.toolbar {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 14px 24px;
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(152, 168, 255, 0.18);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toolbar label {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  gap: 4px;
+}
+
+.toolbar input {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 10px 14px;
+  min-width: 260px;
+  font-size: 15px;
+}
+
+.toolbar-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.toolbar button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-weight: 600;
+  background: linear-gradient(120deg, #ff8ec5, #8ec5ff);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 150ms ease;
+  font-size: 14px;
+}
+
+.toolbar button:hover {
+  transform: translateY(-2px);
+}
+
+.compare-layout {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.era-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.era-timeline li {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  padding: 8px 14px;
+  box-shadow: 0 6px 20px rgba(149, 168, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  text-align: center;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.era-timeline li.is-active,
+.era-timeline li:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(149, 168, 255, 0.3);
+}
+
+.era-year {
+  font-weight: 700;
+  color: #ff7fbf;
+}
+
+.era-name {
+  font-size: 12px;
+  color: #5b5d72;
+}
+
+.graph-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.era-panel {
+  width: 100%;
+}
+
+.graph-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 28px;
+  padding: 18px 20px 28px;
+  box-shadow: 0 40px 80px rgba(123, 146, 255, 0.15);
+}
+
+.graph-card h3 {
+  margin: 0 0 10px;
+  font-size: 20px;
+  line-height: 1.4;
+}
+
+.graph-card svg {
+  width: 100%;
+  height: 600px;
+}
+
+.graph-links path {
+  fill: none;
+  stroke: rgba(47, 52, 79, 0.25);
+  transition: stroke 150ms ease, opacity 150ms ease;
+}
+
+.graph-nodes circle {
+  stroke: #fff;
+  stroke-width: 2;
+  cursor: pointer;
+  transition: opacity 150ms ease, filter 150ms ease;
+}
+
+.graph-label {
+  font-size: 26px;
+  text-anchor: middle;
+  fill: #2f344f;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.graph-label tspan {
+  display: block;
+}
+
+.graph-label-jp {
+  font-size: 30px;
+  fill: #5a5f7a;
+  font-weight: 600;
+}
+
+.graph-label-en {
+  font-size: 24px;
+  fill: #2b2f45;
+  font-weight: 500;
+}
+
+.graph-label-phrase {
+  font-size: 16px;
+  fill: #4a4d62;
+  opacity: 0.85;
+}
+
+.graph-links path.is-active {
+  stroke: rgba(47, 52, 79, 0.55);
+}
+
+.graph-links path.is-dimmed {
+  opacity: 0.1;
+}
+
+.graph-nodes circle.is-active {
+  filter: drop-shadow(0 0 12px rgba(255, 136, 199, 0.65));
+}
+
+.graph-nodes circle.is-dimmed {
+  opacity: 0.15;
+}
+
+.graph-label.is-dimmed {
+  opacity: 0.2;
+}
+
+.graph-label.is-active {
+  opacity: 1;
+}
+
+.graph-label.is-active .graph-label-en,
+.graph-label.is-active .graph-label-jp {
+  fill: #1f1d2a;
+}
+
+.graph-label.is-active .graph-label-phrase {
+  opacity: 1;
+  fill: #1f1d2a;
+}
+
+.tooltip {
+  position: absolute;
+  background: #1d1c28;
+  color: #fff;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  pointer-events: none;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.tooltip.hidden {
+  display: none;
+}
+
+.era-stats {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 24px;
+  padding: 16px 20px;
+  box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.4);
+}
+
+.era-stats h4 {
+  margin: 0 0 12px;
+}
+
+.stats-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  font-size: 12px;
+}
+
+.stats-list li {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  padding: 10px 12px;
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+.stats-list strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.analysis-section {
+  margin-top: 32px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 24px;
+  padding: 20px 24px;
+  box-shadow: 0 25px 60px rgba(120, 140, 220, 0.18);
+}
+
+.analysis-section h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
+.analysis-section ol {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  line-height: 1.7;
+}
+
+.analysis-section strong {
+  color: #ff7fbf;
+}
+
+.analysis-report {
+  margin-top: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  padding: 16px 18px;
+  box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.6);
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+.analysis-report h3 {
+  margin: 0 0 12px;
+}
+
+.analysis-report p {
+  margin: 0 0 12px;
+}
+
+.legend-panel {
+  margin-top: 32px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
+  padding: 16px 20px;
+  box-shadow: 0 30px 60px rgba(114, 138, 255, 0.15);
+}
+
+.legend-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  columns: 2;
+  gap: 8px;
+}
+
+.legend-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+@media (max-width: 768px) {
+  .legend-list {
+    columns: 1;
+  }
+
+  .graph-card svg {
+    height: 480px;
+  }
+
+  #app {
+    padding: 16px;
+  }
+}

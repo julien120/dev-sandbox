@@ -1,0 +1,20 @@
+<svg width="320" height="180" viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="180" rx="28" fill="url(#bg)" />
+  <g filter="url(#glow)">
+    <circle cx="95" cy="90" r="52" fill="#FF8EC5" fill-opacity="0.85" />
+    <circle cx="195" cy="80" r="48" fill="#8EC5FF" fill-opacity="0.85" />
+    <circle cx="160" cy="120" r="58" fill="#8EE5C0" fill-opacity="0.75" />
+  </g>
+  <text x="160" y="160" text-anchor="middle" fill="#1D1C28" font-family="'Zen Kaku Gothic New', sans-serif" font-size="20">
+    Precure Emotion Atlas
+  </text>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="320" y2="180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF0F8" />
+      <stop offset="1" stop-color="#EEF6FF" />
+    </linearGradient>
+    <filter id="glow" x="0" y="0" width="320" height="180" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="12" />
+    </filter>
+  </defs>
+</svg>
