@@ -1,0 +1,12 @@
+<svg width="320" height="180" viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="180" rx="28" fill="url(#paint0_linear)" />
+  <circle cx="100" cy="90" r="52" fill="#7B8BFF" fill-opacity="0.6" />
+  <circle cx="200" cy="70" r="40" fill="#FF6FB5" fill-opacity="0.6" />
+  <text x="160" y="160" text-anchor="middle" fill="#0F0F1D" font-size="22" font-family="'Outfit', 'Noto Sans JP', sans-serif">You Are Julien?</text>
+  <defs>
+    <linearGradient id="paint0_linear" x1="0" y1="0" x2="320" y2="180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#050514" />
+      <stop offset="1" stop-color="#161629" />
+    </linearGradient>
+  </defs>
+</svg>

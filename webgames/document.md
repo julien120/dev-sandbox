@@ -70,6 +70,7 @@ graph TD
 | `apps/DVD`         | ツール         | `/dev-sandbox/tools/DVD/`         | Web カメラで身体を検出して遊ぶ DVD Dodge 体感アクション。        | Pose Landmarker の WASM／モデルを `public/mediapipe/` へ同期するスクリプトを実装。                     |
 | `apps/bubbles`     | ツール         | `/dev-sandbox/tools/bubbles/`     | Google スプレッドシート A 列のテキストがシャンボン玉のように浮遊。| シートID/シート名を env or クエリで設定。公開シート（GViz API）が必要。                                |
 | `apps/precure`     | ツール         | `/dev-sandbox/tools/precure/`     | プリキュアOP歌詞の感情構造をネットワークで比較可視化。            | D3風の力学レイアウト（独自実装）とSVG/PNGエクスポート機能を備えた可視化ツール。                       |
+| `apps/julien`      | ツール         | `/dev-sandbox/tools/julien/`      | Webカメラ映像でジュリアン本人判定を行うプロトタイプ。              | 提供予定の顔埋め込みデータセットを接続するまで疑似スコアで動作。                                     |
 
 ## アセット同期スクリプト
 

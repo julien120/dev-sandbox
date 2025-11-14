@@ -1,0 +1,172 @@
+:root {
+  color: #111322;
+  background: radial-gradient(circle at top, #0f0f1d, #050509 60%, #010104);
+  font-family: 'Outfit', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: transparent;
+  color: inherit;
+}
+
+.wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px clamp(16px, 5vw, 48px) 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+header h1 {
+  margin: 4px 0 12px;
+  font-size: clamp(32px, 5vw, 48px);
+}
+
+header p {
+  line-height: 1.7;
+}
+
+.eyebrow {
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: #ff4da6;
+}
+
+.stage {
+  background: rgba(5, 5, 12, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+  padding: 20px;
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(14px);
+}
+
+.hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.score-panel {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.score-label {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: #8ea6ff;
+}
+
+.score-value {
+  font-size: 40px;
+  font-weight: 700;
+}
+
+#recalibrate {
+  border: none;
+  background: linear-gradient(120deg, #ff6fb5, #7b8bff);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.video-shell {
+  position: relative;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  min-height: 360px;
+}
+
+video {
+  width: 100%;
+  display: block;
+  filter: saturate(1.1);
+}
+
+.message {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  font-size: clamp(20px, 4vw, 36px);
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ff4da6;
+  text-align: center;
+}
+
+.message.is-julien {
+  color: #45ffce;
+}
+
+.status-log {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #94a0ff;
+  min-height: 20px;
+}
+
+.tech-note,
+.analysis-section {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 20px;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tech-note h2,
+.analysis-section h2,
+.analysis-section h3 {
+  margin: 0 0 12px;
+}
+
+.tech-note ol,
+.analysis-section ol {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.7;
+}
+
+.analysis-section strong {
+  color: #ff4da6;
+}
+
+.analysis-report {
+  margin-top: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 12px 14px;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .hud {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  #recalibrate {
+    width: 100%;
+  }
+}

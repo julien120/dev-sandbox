@@ -1,0 +1,5 @@
+insightface==0.7.3
+opencv-python==4.10.0.84
+numpy==2.1.2
+onnxruntime==1.19.2
+tqdm==4.66.5

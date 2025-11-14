@@ -90,6 +90,16 @@
     "thumbnailKey": "precure"
   },
   {
+    "slug": "julien",
+    "category": "tool",
+    "distDir": "julien",
+    "url": "/dev-sandbox/tools/julien/",
+    "title": "You Are Julien?",
+    "description": "Webカメラで映る人物がジュリアン本人かを推定する認証プロトタイプ。",
+    "controls": "カメラ許可 → ジュリアン度を確認 → サンプル調整",
+    "thumbnailKey": "julien"
+  },
+  {
     "slug": "ramen",
     "category": "tool",
     "distDir": "ramen",
