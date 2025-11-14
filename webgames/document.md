@@ -71,6 +71,7 @@ graph TD
 | `apps/bubbles`     | ツール         | `/dev-sandbox/tools/bubbles/`     | Google スプレッドシート A 列のテキストがシャンボン玉のように浮遊。| シートID/シート名を env or クエリで設定。公開シート（GViz API）が必要。                                |
 | `apps/precure`     | ツール         | `/dev-sandbox/tools/precure/`     | プリキュアOP歌詞の感情構造をネットワークで比較可視化。            | D3風の力学レイアウト（独自実装）とSVG/PNGエクスポート機能を備えた可視化ツール。                       |
 | `apps/julien`      | ツール         | `/dev-sandbox/tools/julien/`      | Webカメラ映像でジュリアン本人判定を行うプロトタイプ。              | 提供予定の顔埋め込みデータセットを接続するまで疑似スコアで動作。                                     |
+| `apps/apoc`        | ツール         | `/dev-sandbox/tools/apoc/`        | 黒背景に白いワイヤーフレームで身体を描く A-POC 風ビジュアライザ。  | MediaPipe Pose で骨格を取得し、Canvas に白い線と粒子で描画。                                         |
 
 ## アセット同期スクリプト
 

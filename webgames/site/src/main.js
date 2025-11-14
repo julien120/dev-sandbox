@@ -10,6 +10,7 @@ import dvdThumbnail from '../../assets/dvd-placeholder.svg?url';
 import bubblesThumbnail from '../../assets/bubbles-placeholder.svg?url';
 import precureThumbnail from '../../assets/precure-placeholder.svg?url';
 import julienThumbnail from '../../assets/julien-placeholder.svg?url';
+import apocThumbnail from '../../assets/apoc-placeholder.svg?url';
 import ramenThumbnail from '../../assets/ramen-placeholder.svg?url';
 import vjThumbnail from '../../assets/vj-placeholder.svg?url';
 import netliteracyThumbnail from '../../assets/netliteracy-placeholder.svg?url';
@@ -27,6 +28,7 @@ const thumbnailMap = {
     bubbles: bubblesThumbnail,
     precure: precureThumbnail,
     julien: julienThumbnail,
+    apoc: apocThumbnail,
     ramen: ramenThumbnail,
     vj: vjThumbnail,
     netliteracy: netliteracyThumbnail,

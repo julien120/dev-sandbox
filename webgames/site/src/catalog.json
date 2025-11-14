@@ -100,6 +100,16 @@
     "thumbnailKey": "julien"
   },
   {
+    "slug": "apoc",
+    "category": "tool",
+    "distDir": "apoc",
+    "url": "/dev-sandbox/tools/apoc/",
+    "title": "A-POC Motion Lines",
+    "description": "黒一色のキャンバスに白いワイヤーで身体を描写する ISSEY MIYAKE A-POC 風ビジュアライザ。",
+    "controls": "カメラ許可 → 体を動かすと白い線が追従",
+    "thumbnailKey": "apoc"
+  },
+  {
     "slug": "ramen",
     "category": "tool",
     "distDir": "ramen",
