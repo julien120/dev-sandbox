@@ -110,6 +110,16 @@
     "thumbnailKey": "apoc"
   },
   {
+    "slug": "unko",
+    "category": "tool",
+    "distDir": "unko",
+    "url": "/dev-sandbox/tools/unko/",
+    "title": "UNKO Rain",
+    "description": "「うんこ」と叫んだ瞬間だけ円が落ちてくる音声インタラクション。",
+    "controls": "マイク許可 → 「うんこ」と発声",
+    "thumbnailKey": "unko"
+  },
+  {
     "slug": "ramen",
     "category": "tool",
     "distDir": "ramen",
