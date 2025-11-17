@@ -73,6 +73,7 @@ graph TD
 | `apps/julien`      | ツール         | `/dev-sandbox/tools/julien/`      | Webカメラ映像でジュリアン本人判定を行うプロトタイプ。              | 提供予定の顔埋め込みデータセットを接続するまで疑似スコアで動作。                                     |
 | `apps/apoc`        | ツール         | `/dev-sandbox/tools/apoc/`        | 黒背景に白いワイヤーフレームで身体を描く A-POC 風ビジュアライザ。  | MediaPipe Pose で骨格を取得し、Canvas に白い線と粒子で描画。                                         |
 | `apps/unko`        | ツール         | `/dev-sandbox/tools/unko/`        | 「うんこ」と叫んだ時だけ円が落ちる音声インタラクション。          | Web Speech API と Web Audio で音声認識と声量推定を行い、物理風の落下演出を描画。                      |
+| `apps/ocrdrop`     | ツール         | `/dev-sandbox/tools/ocrdrop/`     | 画像をドロップしてブラウザ内でOCRするシンプルツール。             | CDN から読み込んだ Tesseract.js をブラウザで実行し、クライアントのみで文字抽出しコピペできる。 |
 
 ## アセット同期スクリプト
 

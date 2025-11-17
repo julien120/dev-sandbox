@@ -15,6 +15,7 @@ node: 20
 - パフォーマンス優先：GC 削減、アロケーション抑制、矩形と円の簡易当たり判定を基本。
 - 入力はキーボード、タッチ両対応（Tab ナビ/ARIA 考慮）。
 - すべて ESLint/Prettier/TS typecheck を通すこと。
+- デザイン/UI 実装・改修時は必ず `DESIGN_GUIDELINES.md` を参照し、適用した原則をPR本文に記載すること。
 - GitHub Pages の公開URLは `https://julien120.github.io/dev-sandbox/`。Actions/Pages のワークフローは必ずリポジトリ直下 `.github/workflows` に置き、Vite の `base` と `build.outDir` を `/dev-sandbox/…` に揃えること。
 - 画像/音源は暫定アセットで OK。必ず差し替え前提の抽象化を行う（`assets/`参照）。
 - 新しいゲームを追加するときは、このドキュメントの該当セクションのみを更新し、ほかのゲームの記述を崩さないこと。
@@ -78,6 +79,8 @@ node: 20
 - unko: 「うんこ」と叫んだときだけ円が落ちる音声インタラクションサイト。
   - Web Speech API で日本語音声を認識し、Web Audio で声量を測定して円の大きさを変える。
   - Canvas で重力風の落下アニメーションを描画する。
+- ocrdrop: 画像をドロップしてブラウザ内でOCRするツール。
+  - CDN 経由の Tesseract.js をブラウザで動かし、クライアントサイドのみで文字抽出してコピーできる。
 
 ## 着手テンプレ（例）
 

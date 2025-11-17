@@ -120,6 +120,16 @@
     "thumbnailKey": "unko"
   },
   {
+    "slug": "ocrdrop",
+    "category": "tool",
+    "distDir": "ocrdrop",
+    "url": "/dev-sandbox/tools/ocrdrop/",
+    "title": "OCR Drop",
+    "description": "画像をドロップすると文字を抽出してコピペできるミニOCRツール。",
+    "controls": "画像をドラッグ＆ドロップ → 抽出テキストをコピー",
+    "thumbnailKey": "ocrdrop"
+  },
+  {
     "slug": "ramen",
     "category": "tool",
     "distDir": "ramen",
