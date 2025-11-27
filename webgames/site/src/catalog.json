@@ -130,6 +130,16 @@
     "thumbnailKey": "ocrdrop"
   },
   {
+    "slug": "tierlist",
+    "category": "tool",
+    "distDir": "tierlist",
+    "url": "/dev-sandbox/tools/tierlist/",
+    "title": "Tier List Maker",
+    "description": "ドラッグ＆ドロップで画像をランク別に並べ替えられるカスタム Tier 表メーカー。",
+    "controls": "画像をアップロード → サムネイルをドラッグして S〜E 行に配置",
+    "thumbnailKey": "tierlist"
+  },
+  {
     "slug": "ramen",
     "category": "tool",
     "distDir": "ramen",

@@ -11,8 +11,9 @@ export type MecabRawToken = {
   pronunciation?: string;
 };
 
+type MecabCallArg = string | number | null | undefined;
 type MecabModule = {
-  ccall: (...args: any[]) => any;
+  ccall: (...args: MecabCallArg[]) => unknown;
   _malloc: (size: number) => number;
   _free: (ptr: number) => void;
   lengthBytesUTF8: (value: string) => number;

@@ -19,6 +19,7 @@ import netliteracyThumbnail from '../../assets/netliteracy-placeholder.svg?url';
 import styleforgeThumbnail from '../../assets/styleforge-placeholder.svg?url';
 import ningenThumbnail from '../../assets/ningen-placeholder.svg?url';
 import silhouetteThumbnail from '../../assets/silhouette-placeholder.svg?url';
+import tierlistThumbnail from '../../assets/tierlist-placeholder.svg?url';
 
 const thumbnailMap = {
   flappy: flappyThumbnail,
@@ -40,6 +41,7 @@ const thumbnailMap = {
   styleforge: styleforgeThumbnail,
   ningen: ningenThumbnail,
   silhouette: silhouetteThumbnail,
+  tierlist: tierlistThumbnail,
 } as const;
 
 type ThumbnailKey = keyof typeof thumbnailMap;

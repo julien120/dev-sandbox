@@ -152,14 +152,23 @@ const updateDrops = () => {
   animationFrame = requestAnimationFrame(updateDrops);
 };
 
+type SpeechRecognitionConstructor = new () => SpeechRecognition;
+
 const startRecognition = () => {
-  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-  if (!SpeechRecognition) {
+  const globalWithSpeech = window as typeof window & {
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    SpeechRecognition?: SpeechRecognitionConstructor;
+  };
+
+  const SpeechRecognitionCtor: SpeechRecognitionConstructor | undefined =
+    globalWithSpeech.SpeechRecognition ?? globalWithSpeech.webkitSpeechRecognition;
+
+  if (!SpeechRecognitionCtor) {
     statusEl.textContent = 'このブラウザは音声認識に対応していません';
     return;
   }
 
-  const recognition = new SpeechRecognition();
+  const recognition = new SpeechRecognitionCtor();
   recognition.lang = 'ja-JP';
   recognition.continuous = true;
   recognition.interimResults = true;

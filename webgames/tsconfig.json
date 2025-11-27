@@ -8,6 +8,7 @@
     { "path": "./apps/gifmaker" },
     { "path": "./apps/flappy" },
     { "path": "./apps/tetris" },
+    { "path": "./apps/tierlist" },
     { "path": "./site" }
   ]
 }

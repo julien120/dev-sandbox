@@ -75,7 +75,7 @@ const startCamera = async () => {
     canvas.height = 180;
     analyzeLoop();
     log('カメラ入力を取得しました');
-  } catch (error) {
+  } catch {
     log('カメラの取得に失敗しました。ブラウザの権限をご確認ください');
     verdictEl.textContent = 'カメラアクセス未許可';
   }

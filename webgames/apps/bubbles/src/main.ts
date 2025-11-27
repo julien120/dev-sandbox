@@ -67,8 +67,9 @@ const parseGviz = (payload: string): string[] => {
   }
 
   const rows = data.table?.rows ?? [];
-  const texts = rows
-    .map((row: any) => row.c?.[0]?.v)
+  type GvizRow = { c?: [{ v?: unknown }] };
+  const texts = (rows as GvizRow[])
+    .map((row) => row.c?.[0]?.v)
     .filter((value: unknown): value is string => typeof value === 'string' && value.trim().length > 0)
     .map((value) => value.trim());
   return texts;

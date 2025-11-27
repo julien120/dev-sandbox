@@ -1,17 +1,7 @@
 import './style.css';
 import { FilesetResolver, PoseLandmarker, type PoseLandmarkerResult } from '@mediapipe/tasks-vision';
 
-const CORE_CONNECTIONS: [number, number][] = [
-  [11, 12], // shoulders
-  [11, 23],
-  [12, 24],
-  [23, 24],
-  [23, 25],
-  [24, 26],
-];
-const FACE_INDICES = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 const LETTERS = ['J', 'U', 'L', 'I', 'E', 'N'];
-
 const app = document.querySelector<HTMLDivElement>('#app');
 
 if (!app) {
