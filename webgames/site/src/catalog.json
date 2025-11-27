@@ -1,23 +1,53 @@
 [
   {
-    "slug": "flappy",
-    "category": "game",
-    "distDir": "flappy",
-    "url": "/dev-sandbox/games/flappy/",
-    "title": "フラッピー・フライト",
-    "description": "障害物をすり抜けながらリズムよく飛行するフラッピーバードライクなアクション。",
-    "controls": "スペース / クリック / タップで羽ばたく",
-    "thumbnailKey": "flappy"
+    "slug": "tierlist",
+    "category": "tool",
+    "distDir": "tierlist",
+    "url": "/dev-sandbox/tools/tierlist/",
+    "title": "Tier List Maker",
+    "description": "ドラッグ＆ドロップで画像をランク別に並べ替えられるカスタム Tier 表メーカー。",
+    "controls": "画像をアップロード → サムネイルをドラッグして S〜E 行に配置",
+    "thumbnailKey": "tierlist"
   },
   {
-    "slug": "space",
-    "category": "game",
-    "distDir": "space",
-    "url": "/dev-sandbox/games/space/",
-    "title": "スペースシューター",
-    "description": "波状攻撃に備え、宇宙を駆けるシューティング。敵を倒してハイスコアを狙おう。",
-    "controls": "WASD / 矢印キーで移動、スペースでショット",
-    "thumbnailKey": "space"
+    "slug": "ningen",
+    "category": "tool",
+    "distDir": "ningen",
+    "url": "/dev-sandbox/tools/ningen/",
+    "title": "人間失格ワードクラウドラボ",
+    "description": "青空文庫「人間失格」をMeCabで解析し、頻出語からワードクラウドを生成・ダウンロードできます。",
+    "controls": "「生成」ボタンでクラウド描画 → PNGを保存",
+    "thumbnailKey": "ningen"
+  },
+  {
+    "slug": "silhouette",
+    "category": "tool",
+    "distDir": "silhouette",
+    "url": "/dev-sandbox/tools/silhouette/",
+    "title": "週刊誌のサムネイル生成",
+    "description": "MediaPipe Selfie Segmenter と Canvas 処理で人物を切り抜き、縦書きテキストを重ねて週刊誌風サムネを作成。",
+    "controls": "画像アップロード → 色と文字を設定 → 生成＆ダウンロード",
+    "thumbnailKey": "silhouette"
+  },
+  {
+    "slug": "ocrdrop",
+    "category": "tool",
+    "distDir": "ocrdrop",
+    "url": "/dev-sandbox/tools/ocrdrop/",
+    "title": "OCR Drop",
+    "description": "画像をドロップすると文字を抽出してコピペできるミニOCRツール。",
+    "controls": "画像をドラッグ＆ドロップ → 抽出テキストをコピー",
+    "thumbnailKey": "ocrdrop"
+  },
+  {
+    "slug": "netliteracy",
+    "category": "tool",
+    "distDir": "netliteracy",
+    "url": "/dev-sandbox/tools/netliteracy/",
+    "title": "ネットリテラシー上級者の写真投稿",
+    "description": "写真の顔を自動で検知してぼかし、安心して共有できる画像を作成します。",
+    "controls": "写真をドロップ → 顔をぼかす → 画像をダウンロード",
+    "thumbnailKey": "netliteracy"
   },
   {
     "slug": "emotion",
@@ -120,26 +150,6 @@
     "thumbnailKey": "unko"
   },
   {
-    "slug": "ocrdrop",
-    "category": "tool",
-    "distDir": "ocrdrop",
-    "url": "/dev-sandbox/tools/ocrdrop/",
-    "title": "OCR Drop",
-    "description": "画像をドロップすると文字を抽出してコピペできるミニOCRツール。",
-    "controls": "画像をドラッグ＆ドロップ → 抽出テキストをコピー",
-    "thumbnailKey": "ocrdrop"
-  },
-  {
-    "slug": "tierlist",
-    "category": "tool",
-    "distDir": "tierlist",
-    "url": "/dev-sandbox/tools/tierlist/",
-    "title": "Tier List Maker",
-    "description": "ドラッグ＆ドロップで画像をランク別に並べ替えられるカスタム Tier 表メーカー。",
-    "controls": "画像をアップロード → サムネイルをドラッグして S〜E 行に配置",
-    "thumbnailKey": "tierlist"
-  },
-  {
     "slug": "ramen",
     "category": "tool",
     "distDir": "ramen",
@@ -160,16 +170,6 @@
     "thumbnailKey": "vj"
   },
   {
-    "slug": "netliteracy",
-    "category": "tool",
-    "distDir": "netliteracy",
-    "url": "/dev-sandbox/tools/netliteracy/",
-    "title": "ネットリテラシー上級者の写真投稿",
-    "description": "写真の顔を自動で検知してぼかし、安心して共有できる画像を作成します。",
-    "controls": "写真をドロップ → 顔をぼかす → 画像をダウンロード",
-    "thumbnailKey": "netliteracy"
-  },
-  {
     "slug": "styleforge",
     "category": "tool",
     "distDir": "styleforge",
@@ -180,23 +180,23 @@
     "thumbnailKey": "styleforge"
   },
   {
-    "slug": "ningen",
-    "category": "tool",
-    "distDir": "ningen",
-    "url": "/dev-sandbox/tools/ningen/",
-    "title": "人間失格ワードクラウドラボ",
-    "description": "青空文庫「人間失格」をMeCabで解析し、頻出語からワードクラウドを生成・ダウンロードできます。",
-    "controls": "「生成」ボタンでクラウド描画 → PNGを保存",
-    "thumbnailKey": "ningen"
+    "slug": "flappy",
+    "category": "game",
+    "distDir": "flappy",
+    "url": "/dev-sandbox/games/flappy/",
+    "title": "フラッピー・フライト",
+    "description": "障害物をすり抜けながらリズムよく飛行するフラッピーバードライクなアクション。",
+    "controls": "スペース / クリック / タップで羽ばたく",
+    "thumbnailKey": "flappy"
   },
   {
-    "slug": "silhouette",
-    "category": "tool",
-    "distDir": "silhouette",
-    "url": "/dev-sandbox/tools/silhouette/",
-    "title": "週刊誌のサムネイル生成",
-    "description": "MediaPipe Selfie Segmenter と Canvas 処理で人物を切り抜き、縦書きテキストを重ねて週刊誌風サムネを作成。",
-    "controls": "画像アップロード → 色と文字を設定 → 生成＆ダウンロード",
-    "thumbnailKey": "silhouette"
+    "slug": "space",
+    "category": "game",
+    "distDir": "space",
+    "url": "/dev-sandbox/games/space/",
+    "title": "スペースシューター",
+    "description": "波状攻撃に備え、宇宙を駆けるシューティング。敵を倒してハイスコアを狙おう。",
+    "controls": "WASD / 矢印キーで移動、スペースでショット",
+    "thumbnailKey": "space"
   }
 ]
