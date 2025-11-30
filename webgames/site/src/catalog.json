@@ -50,6 +50,26 @@
     "thumbnailKey": "netliteracy"
   },
   {
+    "slug": "residencecard",
+    "category": "tool",
+    "distDir": "residencecard",
+    "url": "/dev-sandbox/tools/residencecard/",
+    "title": "Residence Card Printer",
+    "description": "入力＆撮影した情報で在留カード風レシートを作り、プリンターへ送るためのフロントエンド。",
+    "controls": "項目入力 → 写真撮影/選択 → プレビュー・印刷リクエストを送信",
+    "thumbnailKey": "reviews"
+  },
+  {
+    "slug": "reviews",
+    "category": "tool",
+    "distDir": "reviews",
+    "url": "/dev-sandbox/tools/reviews/",
+    "title": "Review Fetcher",
+    "description": "Google Places API で合法的に口コミを取得し、JSONでダウンロードできるツール。",
+    "controls": "APIキーと店名/URLを入力 → レビュー取得 → JSONダウンロード",
+    "thumbnailKey": "reviews"
+  },
+  {
     "slug": "emotion",
     "category": "game",
     "distDir": "emotion",

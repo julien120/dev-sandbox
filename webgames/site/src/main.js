@@ -20,6 +20,7 @@ import styleforgeThumbnail from '../../assets/styleforge-placeholder.svg?url';
 import ningenThumbnail from '../../assets/ningen-placeholder.svg?url';
 import silhouetteThumbnail from '../../assets/silhouette-placeholder.svg?url';
 import tierlistThumbnail from '../../assets/tierlist-placeholder.svg?url';
+import reviewsThumbnail from '../../assets/reviews-placeholder.svg?url';
 const thumbnailMap = {
     flappy: flappyThumbnail,
     space: spaceThumbnail,
@@ -41,6 +42,7 @@ const thumbnailMap = {
     ningen: ningenThumbnail,
     silhouette: silhouetteThumbnail,
     tierlist: tierlistThumbnail,
+    reviews: reviewsThumbnail,
 };
 const games = catalog.map((entry) => {
     const thumbnail = thumbnailMap[entry.thumbnailKey];
