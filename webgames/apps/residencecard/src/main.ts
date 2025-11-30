@@ -27,11 +27,11 @@ app.innerHTML = `
       <div class="grid">
         <div>
           <label for="name">氏名</label>
-          <input id="name" value="福山 空" />
+          <input id="name" value="" placeholder="氏名" />
         </div>
         <div>
           <label for="birthday">生年月日</label>
-          <input id="birthday" type="date" value="1998-04-14" />
+          <input id="birthday" type="date" />
         </div>
         <div>
           <label for="gender">性別</label>
