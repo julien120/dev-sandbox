@@ -90,6 +90,16 @@
     "thumbnailKey": "suika"
   },
   {
+    "slug": "novelquiz",
+    "category": "game",
+    "distDir": "novelquiz",
+    "url": "/dev-sandbox/games/novelquiz/",
+    "title": "これなんの小説？",
+    "description": "MeCabで事前解析した頻出語だけをヒントに小説タイトルを当てるクイズ。今は『人間失格』を出題。",
+    "controls": "設定を決めてスタート→頻出語を見ながらタイトル入力。時間切れは答えを見るをクリック",
+    "thumbnailKey": "novelquiz"
+  },
+  {
     "slug": "tetris",
     "category": "game",
     "distDir": "tetris",

@@ -1,0 +1,18 @@
+<svg width="640" height="360" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">これなんの小説？プレビュー</title>
+  <desc id="desc">頻出語を並べたクイズのプレースホルダー</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="#0b1224"/>
+  <rect x="20" y="20" width="600" height="320" rx="18" fill="url(#bg)" opacity="0.5"/>
+  <rect x="32" y="110" width="576" height="140" rx="14" fill="#0f172a" stroke="#1f2a44" stroke-width="2"/>
+  <text x="40" y="70" fill="#e2e8f0" font-family="'Space Grotesk', 'Noto Sans JP', sans-serif" font-size="32" font-weight="700">これなんの小説？</text>
+  <text x="40" y="100" fill="#94a3b8" font-family="'Noto Sans JP', sans-serif" font-size="16">MeCabで解析した頻出語だけでタイトルを当てるゲーム</text>
+  <text x="60" y="150" fill="#38bdf8" font-size="20" font-family="'Noto Sans JP', sans-serif" font-weight="700">堀木 / 顔 / ヒラメ / 道化 / 酒 / 女 / 罪 / 気持 / 家 / 一</text>
+  <text x="60" y="190" fill="#fbbf24" font-size="18" font-family="'Noto Sans JP', sans-serif" font-weight="700">部屋 / 頃 / ほう / 十 / そう / 三 / 言葉 / 一つ / ひと / 父</text>
+  <text x="60" y="230" fill="#e2e8f0" font-size="18" font-family="'Noto Sans JP', sans-serif">制限時間内に思いついたタイトルを入力しよう</text>
+</svg>

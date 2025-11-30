@@ -21,6 +21,7 @@ import ningenThumbnail from '../../assets/ningen-placeholder.svg?url';
 import silhouetteThumbnail from '../../assets/silhouette-placeholder.svg?url';
 import tierlistThumbnail from '../../assets/tierlist-placeholder.svg?url';
 import reviewsThumbnail from '../../assets/reviews-placeholder.svg?url';
+import novelquizThumbnail from '../../assets/novelquiz-placeholder.svg?url';
 const thumbnailMap = {
     flappy: flappyThumbnail,
     space: spaceThumbnail,
@@ -43,6 +44,7 @@ const thumbnailMap = {
     silhouette: silhouetteThumbnail,
     tierlist: tierlistThumbnail,
     reviews: reviewsThumbnail,
+    novelquiz: novelquizThumbnail,
 };
 const games = catalog.map((entry) => {
     const thumbnail = thumbnailMap[entry.thumbnailKey];

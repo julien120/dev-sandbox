@@ -180,9 +180,21 @@ const fetchPlaceReviews = async (apiKey: string, placeId: string, delay: number)
     throw new Error(`details failed: ${res.status} ${res.statusText}`);
   }
   await sleep(delay);
-  const json = (await res.json()) as any;
+  type PlacesResponse = {
+    displayName?: { text?: string };
+    formattedAddress?: string;
+    rating?: number;
+    userRatingCount?: number;
+    reviews?: {
+      authorAttribution?: { displayName?: string };
+      rating?: number;
+      relativePublishTimeDescription?: string;
+      text?: { text?: string };
+    }[];
+  };
+  const json = (await res.json()) as PlacesResponse;
   const reviews: Review[] =
-    json.reviews?.map((r: any) => ({
+    json.reviews?.map((r) => ({
       author: r.authorAttribution?.displayName ?? '匿名',
       rating: r.rating ?? 0,
       relativeTime: r.relativePublishTimeDescription ?? '',
